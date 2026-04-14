@@ -1,6 +1,6 @@
 import { createUIMessageStream, createUIMessageStreamResponse } from "ai";
 import { auth } from "@/app/(auth)/auth";
-import { backendFetch } from "@/lib/api";
+import { backendFetch, publicFetch } from "@/lib/api";
 import { ChatbotError } from "@/lib/errors";
 import { generateUUID } from "@/lib/utils";
 
@@ -10,12 +10,6 @@ export async function POST(request: Request) {
   const json = await request.json();
   const { id, message, messages, selectedChatModel, attachment_ids } = json;
 
-  // Verify NextAuth session (ensure user is logged in)
-  const sessionObj = await auth();
-  if (!sessionObj?.user) {
-    return new ChatbotError("unauthorized:chat").toResponse();
-  }
-
   // Extract message text
   const currentMessageStr =
     message?.parts?.find((p: any) => p.type === "text")?.text ||
@@ -23,6 +17,74 @@ export async function POST(request: Request) {
     message?.content ||
     messages?.at(-1)?.content ||
     "";
+
+  // 1. Resolve Auth & Guest Mode
+  const sessionObj = await auth();
+  const isGuest = !sessionObj?.user;
+
+  // 1b. Guest Mode Logic: Call public demo endpoint
+  if (isGuest) {
+    try {
+      const demoRes = await publicFetch("/api/chat/demo", {
+        method: "POST",
+        body: JSON.stringify({
+          message: currentMessageStr,
+          messages: messages || [], // pass history if any (for multi-turn demo)
+        }),
+      });
+
+      if (demoRes.status === 429) {
+        return new ChatbotError("rate_limit:chat", "Guest limit reached. Please sign in.").toResponse();
+      }
+
+      if (!demoRes.ok) {
+        return new ChatbotError("offline:chat").toResponse();
+      }
+
+      // Proxy the demo stream back to the UI
+      const stream = createUIMessageStream({
+        execute: async ({ writer }) => {
+          const reader = demoRes.body?.getReader();
+          if (!reader) return;
+          const decoder = new TextDecoder();
+          let buffer = "";
+          const textPartId = generateUUID();
+          let textStarted = false;
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            const parts = buffer.split("\n\n");
+            buffer = parts.pop() || "";
+            for (const part of parts) {
+              if (!part.startsWith("data: ")) continue;
+              const dataStr = part.slice(6).trim();
+              if (dataStr === "[DONE]") break;
+              try {
+                const parsed = JSON.parse(dataStr);
+                if (!textStarted && (parsed.tool_call || parsed.text)) {
+                   writer.write({ type: "text-start", id: textPartId });
+                   textStarted = true;
+                }
+                if (parsed.tool_call) {
+                  writer.write({ type: "data-tool-call", data: parsed.tool_call });
+                } else if (parsed.text) {
+                  writer.write({ type: "text-delta", id: textPartId, delta: parsed.text });
+                }
+              } catch (_) {}
+            }
+          }
+        },
+        generateId: generateUUID
+      });
+
+      return createUIMessageStreamResponse({ stream });
+    } catch (err) {
+      console.error("Guest mode error:", err);
+      return new ChatbotError("offline:chat").toResponse();
+    }
+  }
 
   // 1. Resolve Provider and Model
   const modelId = selectedChatModel || "hacxgpt/hacxgpt-lightning";

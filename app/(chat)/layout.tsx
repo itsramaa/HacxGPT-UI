@@ -27,27 +27,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
 async function ChatContainer({ children }: { children: React.ReactNode }) {
   const session = await auth();
-
-  // NOTE: Do NOT hard redirect("/login") here — that creates a loop with middleware.
-  // Middleware already guards unauthenticated routes. The only case we reach here
-  // without a session is if the backend is temporarily unavailable (auth() fails
-  // to validate the token). In that case, show a fallback instead of looping.
-  if (!session?.user) {
-    return (
-      <div className="flex h-dvh items-center justify-center bg-sidebar">
-        <div className="flex flex-col items-center gap-3 text-center">
-          <p className="text-sm text-muted-foreground">
-            Session could not be loaded. Please{" "}
-            <a className="underline" href="/login">
-              sign in again
-            </a>
-            .
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   return <SidebarShell session={session}>{children}</SidebarShell>;
 }
 
@@ -63,7 +42,7 @@ async function SidebarShell({
 
   return (
     <SidebarProvider defaultOpen={!isCollapsed}>
-      <ActiveChatProvider>
+      <ActiveChatProvider session={session}>
         <AppSidebar user={session?.user} />
         <SidebarInset>
           <Toaster

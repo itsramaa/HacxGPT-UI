@@ -55,6 +55,7 @@ type ActiveChatContextValue = {
   setSearchQuery: Dispatch<SetStateAction<string>>;
   activeTool: string | null;
   setActiveTool: Dispatch<SetStateAction<string | null>>;
+  isGuest: boolean;
 };
 
 const ActiveChatContext = createContext<ActiveChatContextValue | null>(null);
@@ -64,7 +65,8 @@ function extractChatId(pathname: string): string | null {
   return match ? match[1] : null;
 }
 
-export function ActiveChatProvider({ children }: { children: ReactNode }) {
+export function ActiveChatProvider({ children, session }: { children: ReactNode, session: any }) {
+  const isGuest = !session?.user;
   const pathname = usePathname();
   const { setDataStream } = useDataStream();
   const { mutate } = useSWRConfig();
@@ -95,7 +97,7 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
     document.cookie = `chat-model=${encodeURIComponent(id)}; path=/; max-age=31536000`;
 
     // 2. If existing chat, sync to backend session
-    if (!isNewChat && allModels?.models) {
+    if (!isNewChat && !isGuest && allModels?.models) {
       const modelDetail = allModels.models.find((m: any) => m.id === id);
       if (modelDetail) {
         try {
@@ -130,7 +132,7 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
   const [input, setInput] = useState("");
 
   const { data: chatData, isLoading } = useSWR(
-    isNewChat
+    (isNewChat || isGuest)
       ? null
       : `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/messages?chatId=${chatId}`,
     fetcher,
@@ -246,6 +248,8 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
     },
     onFinish: (message) => {
       setActiveTool(null);
+      if (isGuest) return;
+
       const historyKey = unstable_serialize(getChatHistoryPaginationKey);
       const currentChatKey = `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/messages?chatId=${chatId}`;
       
@@ -276,6 +280,11 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
       }
     },
     onError: (error) => {
+      if (error.message?.includes("Guest limit reached")) {
+        window.dispatchEvent(new CustomEvent("hacxgpt:guest-limit-reached"));
+        return;
+      }
+
       if (error instanceof ChatbotError) {
         toast({ type: "error", description: error.message });
       } else {
@@ -480,6 +489,7 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
       handleRegenerate,
       searchQuery,
       setSearchQuery,
+      isGuest,
     }),
     [
       chatId,
@@ -504,6 +514,7 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
       handleRegenerate,
       searchQuery,
       setSearchQuery,
+      isGuest,
     ]
   );
 

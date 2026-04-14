@@ -21,6 +21,7 @@ import { submitEditedMessage } from "./message-editor";
 import { Messages } from "./messages";
 import { MultimodalInput } from "./multimodal-input";
 import { SettingsDialog } from "./settings-dialog";
+import { GuestLimitDialog } from "./guest-limit-dialog";
 
 export function ChatShell() {
   const pathname = usePathname();
@@ -152,6 +153,7 @@ export function ChatShell() {
 
       <DataStreamHandler />
       <SettingsDialog onOpenChange={setShowSettings} open={showSettings} />
+      <GuestLimitDialog />
 
     </>
   );
