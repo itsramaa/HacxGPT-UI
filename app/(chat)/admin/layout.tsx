@@ -1,0 +1,91 @@
+"use client";
+
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import useSWR from "swr";
+import { 
+  UsersIcon, 
+  SettingsIcon, 
+  ShieldCheckIcon, 
+  BarChart3Icon,
+  CpuIcon
+} from "lucide-react";
+import { cloneElement } from "react";
+
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
+
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+
+  const { data: stats } = useSWR(
+    status === "authenticated" ? "/api/admin/stats" : null,
+    fetcher
+  );
+
+  useEffect(() => {
+    if (status === "unauthenticated" || (session?.user && (session.user as any).role !== "admin")) {
+        fetch("/api/auth/me")
+          .then(res => res.json())
+          .then(data => {
+            if (data.role !== "admin") router.push("/");
+          })
+          .catch(() => router.push("/"));
+    }
+  }, [status, session, router]);
+
+  if (status === "loading") return null;
+
+  return (
+    <div className="flex flex-col h-full bg-background overflow-hidden font-sans">
+      <div className="flex flex-col gap-6 p-6 max-w-7xl mx-auto w-full overflow-y-auto pb-20">
+        
+        {/* Header */}
+        <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-orange-500/10 text-orange-500 border border-orange-500/20">
+                    <ShieldCheckIcon className="size-6" />
+                </div>
+                <div>
+                    <h1 className="text-2xl font-bold tracking-tight">System Mainframe</h1>
+                    <p className="text-muted-foreground text-xs font-mono uppercase tracking-widest opacity-70">Privileged Access Level 4</p>
+                </div>
+            </div>
+        </div>
+
+        {/* Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+           <StatCard icon={<UsersIcon />} label="Global Nodes" value={stats?.total_users ?? 0} color="primary" />
+           <StatCard icon={<BarChart3Icon />} label="Live Sessions" value={stats?.total_sessions ?? 0} color="emerald" />
+           <StatCard icon={<CpuIcon />} label="Active models" value={stats?.total_models ?? 0} color="orange" />
+           <StatCard icon={<SettingsIcon />} label="API Status" value="ONLINE" color="emerald" />
+        </div>
+
+        <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
+            {children}
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
+function StatCard({ icon, label, value, color }: { icon: any, label: string, value: string | number, color: string }) {
+    const colorMap: any = {
+        primary: "bg-primary/5 text-primary border-primary/10",
+        emerald: "bg-emerald-500/5 text-emerald-400 border-emerald-500/10",
+        orange: "bg-orange-500/5 text-orange-400 border-orange-500/10",
+    }
+    return (
+        <div className={`p-4 rounded-2xl border backdrop-blur-sm flex items-center gap-4 ${colorMap[color] || colorMap.primary}`}>
+            <div className="p-2.5 rounded-xl bg-background/50 border border-border/20">
+                {cloneElement(icon, { className: "size-5" })}
+            </div>
+            <div className="flex flex-col">
+                <span className="text-[10px] font-bold uppercase tracking-widest opacity-60 leading-tight">{label}</span>
+                <span className="text-xl font-bold font-mono tracking-tighter">{value}</span>
+            </div>
+        </div>
+    )
+}

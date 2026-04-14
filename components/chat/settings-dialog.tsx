@@ -10,6 +10,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { LoaderIcon } from "./icons";
 import { cn } from "@/lib/utils";
@@ -46,6 +56,12 @@ export function SettingsDialog({
   const ITEMS_PER_PAGE = 5;
   const [providerPage, setProviderPage] = useState(1);
   const [keyPage, setKeyPage] = useState(1);
+ 
+  // Confirmation states
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [confirmPurgeOpen, setConfirmPurgeOpen] = useState(false);
+  const [confirmBulkOpen, setConfirmBulkOpen] = useState(false);
+  const [pendingDeleteData, setPendingDeleteData] = useState<{id: string, name: string} | null>(null);
 
   // Form state for adding a new key
   const [selectedProviderId, setSelectedProviderId] = useState("");
@@ -120,10 +136,8 @@ export function SettingsDialog({
 
   const [selectedKeyIds, setSelectedKeyIds] = useState<Set<string>>(new Set());
 
-  const handleBulkDelete = async () => {
+  const executeBulkDelete = async () => {
     if (selectedKeyIds.size === 0) return;
-    if (!confirm(`Permanently delete ${selectedKeyIds.size} selected keys?`)) return;
-
     try {
       const ids = Array.from(selectedKeyIds);
       const res = await fetch("/api/keys", {
@@ -139,12 +153,16 @@ export function SettingsDialog({
       }
     } catch (err) {
       toast.error("Bulk deletion failed");
+    } finally {
+      setConfirmBulkOpen(false);
     }
   };
 
-  const handlePurgeAll = async () => {
-    if (!confirm("CRITICAL: Wipe your entire API key vault? This cannot be undone.")) return;
+  const handleBulkDelete = () => {
+    if (selectedKeyIds.size > 0) setConfirmBulkOpen(true);
+  };
 
+  const executePurgeAll = async () => {
     try {
       const res = await fetch("/api/keys?all=true", { method: "DELETE" });
       if (res.ok) {
@@ -154,8 +172,12 @@ export function SettingsDialog({
       }
     } catch (err) {
       toast.error("Failed to wipe vault");
+    } finally {
+      setConfirmPurgeOpen(false);
     }
   };
+
+  const handlePurgeAll = () => setConfirmPurgeOpen(true);
 
   const toggleSelectAll = () => {
     if (selectedKeyIds.size === keys.length) {
@@ -172,23 +194,30 @@ export function SettingsDialog({
     setSelectedKeyIds(next);
   };
 
-  const handleDeleteKey = async (id: string, name: string) => {
-    if (!confirm(`Are you sure you want to delete the key "${name}"?`)) return;
-
+  const executeDeleteKey = async () => {
+    if (!pendingDeleteData) return;
     try {
-      const res = await fetch(`/api/keys/${id}`, {
+      const res = await fetch(`/api/keys/${pendingDeleteData.id}`, {
         method: "DELETE",
       });
 
       if (res.ok) {
-        toast.success(`Key "${name}" deleted`);
+        toast.success(`Key "${pendingDeleteData.name}" deleted`);
         fetchData();
       } else {
         toast.error("Failed to delete key");
       }
     } catch (err) {
       toast.error("An error occurred while deleting the key");
+    } finally {
+      setConfirmDeleteOpen(false);
+      setPendingDeleteData(null);
     }
+  };
+
+  const handleDeleteKey = (id: string, name: string) => {
+    setPendingDeleteData({ id, name });
+    setConfirmDeleteOpen(true);
   };
 
   // Pagination Logic
@@ -487,6 +516,56 @@ export function SettingsDialog({
              Your credentials are securely encrypted before storage.
           </p>
         </div>
+
+        {/* Action Confirmations */}
+        <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
+          <AlertDialogContent className="bg-card border-border/40">
+            <AlertDialogHeader>
+              <AlertDialogTitle>Purge Shared Connection?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Permanently remove <span className="text-primary font-bold">"{pendingDeleteData?.name}"</span> from the vault. 
+                Any active sessions tied to this key will fail immediately.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>ABORT</AlertDialogCancel>
+              <AlertDialogAction onClick={executeDeleteKey} className="bg-destructive text-destructive-foreground">PURGE_NODE</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        <AlertDialog open={confirmBulkOpen} onOpenChange={setConfirmBulkOpen}>
+          <AlertDialogContent className="bg-card border-border/40">
+            <AlertDialogHeader>
+              <AlertDialogTitle>Execute Bulk Purge?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Wipe <span className="text-primary font-bold">{selectedKeyIds.size} selected connections</span>. 
+                This batch operation is irreversible.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>ABORT</AlertDialogCancel>
+              <AlertDialogAction onClick={executeBulkDelete} className="bg-destructive text-destructive-foreground">EXECUTE_WIPE</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        <AlertDialog open={confirmPurgeOpen} onOpenChange={setConfirmPurgeOpen}>
+          <AlertDialogContent className="bg-card border-border/40">
+            <AlertDialogHeader>
+              <AlertDialogTitle className="text-destructive">CRITICAL_VAULT_RESET</AlertDialogTitle>
+              <AlertDialogDescription>
+                You are about to wipe your entire API key reservoir. 
+                All communication channels will be severed. Continue?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>SECURE_ABORT</AlertDialogCancel>
+              <AlertDialogAction onClick={executePurgeAll} className="bg-destructive text-destructive-foreground">WIPE_TOTAL_VAULT</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
       </DialogContent>
     </Dialog>
   );

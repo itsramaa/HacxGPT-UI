@@ -26,6 +26,7 @@ import {
   SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
@@ -81,7 +82,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
     }
   };
 
-  const isAdminPage = pathname === "/admin";
+  const isAdminPage = pathname?.startsWith("/admin");
 
   return (
     <>
@@ -119,26 +120,12 @@ export function AppSidebar({ user }: { user: User | undefined }) {
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarHeader>
-        <SidebarContent>
-          <SidebarGroup className="pt-1">
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {isAdminPage ? (
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      className="h-8 rounded-lg border border-primary/30 text-[13px] text-primary transition-colors duration-150 hover:bg-primary/10"
-                      onClick={() => {
-                        setOpenMobile(false);
-                        router.push("/");
-                      }}
-                      tooltip="Back to Chat"
-                    >
-                      <ArrowLeftIcon className="size-4" />
-                      <span className="font-medium">Back to Chat</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ) : (
-                  <>
+        <SidebarContent className="gap-0 border-r border-sidebar-border/50">
+          {!isAdminPage && (
+            <>
+              <SidebarGroup className="pt-1">
+                <SidebarGroupContent>
+                  <SidebarMenu>
                     <SidebarMenuItem>
                       <SidebarMenuButton
                         className="h-8 rounded-lg border border-sidebar-border text-[13px] text-sidebar-foreground/70 transition-colors duration-150 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
@@ -164,15 +151,24 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                         </SidebarMenuButton>
                       </SidebarMenuItem>
                     )}
-                  </>
-                )}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-          <SidebarAdmin />
-          {!isAdminPage && <SidebarHistory user={user} />}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+
+              <SidebarGroup className="px-1 pr-2 pt-0">
+                <SidebarGroupLabel className="h-6 text-[10px] font-bold uppercase tracking-widest text-sidebar-foreground/30">
+                  History
+                </SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarHistory user={user} />
+                </SidebarGroupContent>
+              </SidebarGroup>
+            </>
+          )}
+
+          {isAdminPage && <SidebarAdmin />}
         </SidebarContent>
-        <SidebarFooter className="border-t border-sidebar-border pt-2 pb-3">
+        <SidebarFooter className="border-t border-r border-sidebar-border/50 bg-sidebar-accent/5 p-2">
           {user && <SidebarUserNav user={user} />}
           <div className="px-2 py-1 text-[10px] text-sidebar-foreground/30 flex items-center justify-between group-data-[collapsible=icon]:hidden">
             <span>© 2026 Kawasan Digital</span>

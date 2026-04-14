@@ -59,18 +59,6 @@ function PureChatHeader({
       </div>
 
       <div className="flex items-center gap-2">
-        <Button
-          className="rounded-lg text-muted-foreground hover:text-foreground"
-          onClick={() => setTheme(resolvedTheme === "light" ? "dark" : "light")}
-          size="icon-sm"
-          variant="ghost"
-        >
-          {resolvedTheme === "light" ? (
-            <MoonIcon className="size-4" />
-          ) : (
-            <SunIcon className="size-4" />
-          )}
-        </Button>
       </div>
     </header>
   );

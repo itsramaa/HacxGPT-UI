@@ -34,6 +34,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { fetcher } from "@/lib/utils";
 import type { BackendApiKey, BackendProvider } from "@/lib/types";
 import { LoaderIcon } from "@/components/chat/icons";
@@ -63,6 +73,12 @@ export default function SettingsPage() {
   const ITEMS_PER_PAGE = 4;
   const [keyPage, setKeyPage] = useState(1);
   const [providerPage, setProviderPage] = useState(1);
+
+  // Confirmation States
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [confirmPurgeOpen, setConfirmPurgeOpen] = useState(false);
+  const [confirmBulkOpen, setConfirmBulkOpen] = useState(false);
+  const [pendingDeleteData, setPendingDeleteData] = useState<{id: string, name: string} | null>(null);
 
   const models = modelsData?.models || [];
   const activeKeys = keys || [];
@@ -113,10 +129,8 @@ export default function SettingsPage() {
   // Selection State
   const [selectedKeyIds, setSelectedKeyIds] = useState<Set<string>>(new Set());
 
-  const handleBulkDelete = async () => {
+  const executeBulkDelete = async () => {
     if (selectedKeyIds.size === 0) return;
-    if (!confirm(`Permanently delete ${selectedKeyIds.size} selected connections?`)) return;
-
     try {
       const ids = Array.from(selectedKeyIds);
       const res = await fetch("/api/keys", {
@@ -132,12 +146,12 @@ export default function SettingsPage() {
       }
     } catch (err) {
       toast.error("Bulk deletion failed");
+    } finally {
+      setConfirmBulkOpen(false);
     }
   };
 
-  const handlePurgeAll = async () => {
-    if (!confirm("CRITICAL: Wipe your entire API key vault? This cannot be undone.")) return;
-
+  const executePurgeAll = async () => {
     try {
       const res = await fetch("/api/keys?all=true", { method: "DELETE" });
       if (res.ok) {
@@ -147,6 +161,26 @@ export default function SettingsPage() {
       }
     } catch (err) {
       toast.error("Failed to wipe vault");
+    } finally {
+      setConfirmPurgeOpen(false);
+    }
+  };
+
+  const executeDeleteKey = async () => {
+    if (!pendingDeleteData) return;
+    try {
+      const res = await fetch(`/api/keys/${pendingDeleteData.id}`, { method: "DELETE" });
+      if (res.ok) {
+        toast.success(`Connection "${pendingDeleteData.name}" removed`);
+        mutate("/api/keys");
+      } else {
+        toast.error("Failed to delete connection");
+      }
+    } catch (err) {
+      toast.error("Deletion failed");
+    } finally {
+      setConfirmDeleteOpen(false);
+      setPendingDeleteData(null);
     }
   };
 
@@ -163,22 +197,6 @@ export default function SettingsPage() {
     if (next.has(id)) next.delete(id);
     else next.add(id);
     setSelectedKeyIds(next);
-  };
-
-  const handleDeleteKey = async (id: string, name: string) => {
-    if (!confirm(`Are you sure you want to delete the connection "${name}"?`)) return;
-
-    try {
-      const res = await fetch(`/api/keys/${id}`, { method: "DELETE" });
-      if (res.ok) {
-        toast.success(`Connection "${name}" removed`);
-        mutate("/api/keys");
-      } else {
-        toast.error("Failed to delete connection");
-      }
-    } catch (err) {
-      toast.error("Deletetion failed");
-    }
   };
 
   return (
@@ -302,7 +320,7 @@ export default function SettingsPage() {
                           variant="destructive" 
                           size="sm" 
                           className="h-8 text-[10px] font-black px-4 shadow-lg shadow-destructive/20"
-                          onClick={handleBulkDelete}
+                          onClick={() => setConfirmBulkOpen(true)}
                         >
                           DELETE SELECTED ({selectedKeyIds.size})
                         </Button>
@@ -311,7 +329,7 @@ export default function SettingsPage() {
                           variant="ghost" 
                           size="sm" 
                           className="h-8 text-[10px] font-black text-muted-foreground hover:text-red-400"
-                          onClick={handlePurgeAll}
+                          onClick={() => setConfirmPurgeOpen(true)}
                         >
                           PURGE VAULT
                         </Button>
@@ -430,7 +448,7 @@ export default function SettingsPage() {
                             variant="ghost" 
                             size="icon" 
                             className="h-10 w-10 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity hover:text-destructive hover:bg-destructive/10 rounded-xl"
-                            onClick={() => handleDeleteKey(k.id, k.name)}
+                            onClick={() => { setPendingDeleteData({id: k.id, name: k.name}); setConfirmDeleteOpen(true); }}
                           >
                             <Trash2Icon size={16} />
                           </Button>
@@ -478,7 +496,7 @@ export default function SettingsPage() {
                 {paginatedProviders?.map((p: any) => {
                   const providerKeys = activeKeys.filter(k => k.provider_id === p.id);
                   const isAuthorized = providerKeys.some(k => k.is_active);
-                  const providerModels = models.filter((m: any) => m.providerId === p.id);
+                  const providerModels = models.filter((m: any) => m.provider_id === p.id || m.providerId === p.id);
 
                   return (
                     <div 
@@ -543,6 +561,55 @@ export default function SettingsPage() {
           </div>
         </div>
       </div>
+
+      {/* Confirmation Modals */}
+      <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
+        <AlertDialogContent className="bg-card border-border/40">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Disconnect Neural Channel?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to purge <span className="text-primary font-bold">"{pendingDeleteData?.name}"</span>? 
+              This will disable communication with the target provider.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>ABORT</AlertDialogCancel>
+            <AlertDialogAction onClick={executeDeleteKey} className="bg-destructive text-destructive-foreground">PURGE_NODE</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={confirmBulkOpen} onOpenChange={setConfirmBulkOpen}>
+        <AlertDialogContent className="bg-card border-border/40">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Execute Cluster Wipe?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Wipe <span className="text-primary font-bold">{selectedKeyIds.size} selected connections</span>. 
+              This batch operation cannot be reversed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>ABORT</AlertDialogCancel>
+            <AlertDialogAction onClick={executeBulkDelete} className="bg-destructive text-destructive-foreground">EXECUTE_WIPE</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={confirmPurgeOpen} onOpenChange={setConfirmPurgeOpen}>
+        <AlertDialogContent className="bg-card border-border/40">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-destructive font-black tracking-widest uppercase">CRITICAL_VAULT_RESET</AlertDialogTitle>
+            <AlertDialogDescription>
+              You are about to wipe your entire API key reservoir. 
+              This action results in total system silence. Proceed?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>SECURE_ABORT</AlertDialogCancel>
+            <AlertDialogAction onClick={executePurgeAll} className="bg-destructive text-destructive-foreground">WIPE_TOTAL_VAULT</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

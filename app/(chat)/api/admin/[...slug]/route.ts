@@ -1,0 +1,42 @@
+import { auth } from "@/app/(auth)/auth";
+import { backendJSON } from "@/lib/api";
+import { NextRequest } from "next/server";
+
+async function proxyRequest(request: NextRequest, { params }: { params: any }) {
+  const session = await auth();
+  if (!session?.user?.accessToken) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // Cast params to handle potential async nature in Next 15
+  const slug = (await params).slug as string[];
+  const targetPath = `/api/admin/${slug.join("/")}`;
+  const searchParams = request.nextUrl.searchParams.toString();
+  const finalPath = searchParams ? `${targetPath}?${searchParams}` : targetPath;
+
+  try {
+    const method = request.method;
+    let options: any = { method };
+
+    if (method !== "GET" && method !== "HEAD") {
+        try {
+            const body = await request.json();
+            options.body = JSON.stringify(body);
+        } catch (e) {
+            // No body or not JSON
+        }
+    }
+
+    const data = await backendJSON<any>(finalPath, options);
+    return Response.json(data);
+  } catch (err: any) {
+    console.error(`Error proxying admin ${request.method} ${finalPath}:`, err);
+    return Response.json({ error: err.message || "Failed to proxy request" }, { status: err.status || 500 });
+  }
+}
+
+export const GET = proxyRequest;
+export const POST = proxyRequest;
+export const PATCH = proxyRequest;
+export const DELETE = proxyRequest;
+export const PUT = proxyRequest;

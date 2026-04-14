@@ -27,55 +27,102 @@ export function SidebarAdmin() {
 
   if (profile?.role !== "admin") return null;
 
-  const adminItems = [
-    {
-      title: "Mainframe",
-      url: "/admin",
-      icon: ShieldCheckIcon,
-    },
+  const managementItems = [
     {
        title: "Nodes Registry",
-       url: "/admin",
+       url: "/admin/users",
        icon: UsersIcon,
     },
     {
+       title: "LLM Providers",
+       url: "/admin/providers",
+       icon: DatabaseIcon,
+    },
+  ];
+
+  const controlItems = [
+    {
         title: "System Logs",
-        url: "#",
+        url: "/admin/logs",
         icon: TerminalIcon,
-        disabled: true,
+    },
+    {
+        title: "Observability",
+        url: "/admin/sessions",
+        icon: ActivityIcon,
     }
   ];
 
   return (
-    <SidebarGroup className="mt-4">
-      <SidebarGroupLabel className="text-[10px] font-bold uppercase tracking-widest text-orange-500/70">
-        System Control
-      </SidebarGroupLabel>
-      <SidebarGroupContent>
+    <>
+      {/* Root Mainframe - Independent */}
+      <SidebarGroup className="pt-2">
         <SidebarMenu>
-          {adminItems.map((item) => (
-            <SidebarMenuItem key={item.title}>
-              <SidebarMenuButton
-                asChild
-                isActive={pathname === item.url}
-                className={`transition-all duration-200 ${item.disabled ? 'opacity-40 cursor-not-allowed' : 'hover:bg-orange-500/10 hover:text-orange-400'}`}
-                onClick={(e) => {
-                    if (item.disabled) {
-                        e.preventDefault();
-                        return;
-                    }
-                    router.push(item.url);
-                }}
-              >
-                <div className="flex items-center gap-2">
-                   <item.icon className={`size-4 ${pathname === item.url ? 'text-orange-500' : ''}`} />
-                   <span className="text-[13px] font-medium">{item.title}</span>
-                </div>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          ))}
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              asChild
+              isActive={pathname === "/admin"}
+              className={`h-10 transition-all duration-300 ${pathname === "/admin" ? 'bg-orange-500/20 text-orange-500 border border-orange-500/30' : 'hover:bg-muted/50'}`}
+              onClick={() => router.push("/admin")}
+            >
+              <div className="flex items-center gap-3 px-1">
+                 <ShieldCheckIcon className={`size-5 ${pathname === "/admin" ? 'text-orange-500 drop-shadow-[0_0_8px_rgba(249,115,22,0.5)]' : ''}`} />
+                 <span className="text-sm font-black uppercase tracking-tighter">Mainframe</span>
+              </div>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
         </SidebarMenu>
-      </SidebarGroupContent>
-    </SidebarGroup>
+      </SidebarGroup>
+
+      <SidebarGroup className="mt-2">
+        <SidebarGroupLabel className="text-[10px] font-bold uppercase tracking-widest text-primary/50 px-4">
+          Management
+        </SidebarGroupLabel>
+        <SidebarGroupContent>
+          <SidebarMenu>
+            {managementItems.map((item) => (
+              <SidebarMenuItem key={item.title}>
+                <SidebarMenuButton
+                  asChild
+                  isActive={pathname === item.url}
+                  className="transition-all duration-200 hover:bg-primary/10 hover:text-primary"
+                  onClick={() => router.push(item.url)}
+                >
+                  <div className="flex items-center gap-2">
+                     <item.icon className="size-4" />
+                     <span className="text-[13px] font-medium">{item.title}</span>
+                  </div>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
+          </SidebarMenu>
+        </SidebarGroupContent>
+      </SidebarGroup>
+
+      <SidebarGroup>
+        <SidebarGroupLabel className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50 px-4">
+          System Control
+        </SidebarGroupLabel>
+        <SidebarGroupContent>
+          <SidebarMenu>
+            {controlItems.map((item) => (
+              <SidebarMenuItem key={item.title}>
+                <SidebarMenuButton
+                  asChild
+                  isActive={pathname === item.url}
+                  className="transition-all duration-200 hover:bg-muted/50"
+                  onClick={() => router.push(item.url)}
+                >
+                  <div className="flex items-center gap-2">
+                     <item.icon className={`size-4 ${pathname === item.url ? 'text-orange-500' : ''}`} />
+                     <span className="text-[13px] font-medium">{item.title}</span>
+                  </div>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
+          </SidebarMenu>
+        </SidebarGroupContent>
+      </SidebarGroup>
+    </>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
-import { ChevronUp, ShieldCheckIcon } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { ChevronUp, ShieldCheckIcon, MessageSquareIcon, MoonIcon, SunIcon } from "lucide-react";
+import { useRouter, usePathname } from "next/navigation";
 import type { User } from "next-auth";
 import { signOut, useSession } from "next-auth/react";
 import { useTheme } from "next-themes";
@@ -57,6 +57,9 @@ export function SidebarUserNav({ user }: { user: User }) {
 
   const displayUsage = profile?.total_usage ?? session?.user?.total_usage;
 
+  const pathname = usePathname();
+  const isAdminPath = pathname?.startsWith("/admin");
+
   return (
     <SidebarMenu>
       <SidebarMenuItem>
@@ -76,19 +79,19 @@ export function SidebarUserNav({ user }: { user: User }) {
               </SidebarMenuButton>
             ) : (
               <SidebarMenuButton
-                className="h-8 px-2 rounded-lg bg-transparent text-sidebar-foreground/70 transition-colors duration-150 hover:text-sidebar-foreground data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+                className="h-10 px-3 rounded-xl bg-muted/20 text-sidebar-foreground transition-all duration-200 hover:bg-muted/40 hover:text-primary data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground border border-border/10 hover:border-border/40"
                 data-testid="user-nav-button"
               >
                 <div
-                  className="size-5 shrink-0 rounded-full ring-1 ring-sidebar-border/50"
+                  className="size-6 shrink-0 rounded-full ring-2 ring-primary/20 group-hover:ring-primary/40 transition-all"
                   style={{
                     background: `linear-gradient(135deg, oklch(0.35 0.08 ${emailToHue(user.email ?? "")}), oklch(0.25 0.05 ${emailToHue(user.email ?? "") + 40}))`,
                   }}
                 />
-                <span className="truncate text-[13px]" data-testid="user-email">
+                <span className="truncate text-sm font-medium ml-1" data-testid="user-email">
                   {user?.email}
                 </span>
-                <ChevronUp className="ml-auto size-3.5 text-sidebar-foreground/50" />
+                <ChevronUp className="ml-auto size-4 opacity-40 group-hover:opacity-100 transition-opacity" />
               </SidebarMenuButton>
             )}
           </DropdownMenuTrigger>
@@ -111,12 +114,12 @@ export function SidebarUserNav({ user }: { user: User }) {
 
             {profile?.role === "admin" && (
               <DropdownMenuItem
-                className="cursor-pointer text-[13px] font-semibold text-orange-400 py-2 border-b border-border/20 rounded-none"
-                onSelect={() => router.push("/admin")}
+                className={`cursor-pointer text-[13px] font-semibold py-2 border-b border-border/20 rounded-none ${isAdminPath ? 'text-primary' : 'text-orange-400'}`}
+                onSelect={() => router.push(isAdminPath ? "/" : "/admin")}
               >
                 <div className="flex items-center gap-2">
-                   <ShieldCheckIcon className="size-4" />
-                   Admin Dashboard
+                   {isAdminPath ? <MessageSquareIcon className="size-4" /> : <ShieldCheckIcon className="size-4" />}
+                   {isAdminPath ? "Back to Chat" : "Admin Dashboard"}
                 </div>
               </DropdownMenuItem>
             )}
@@ -135,6 +138,19 @@ export function SidebarUserNav({ user }: { user: User }) {
               onSelect={() => router.push("/settings")}
             >
               Settings
+            </DropdownMenuItem>
+            
+            <DropdownMenuItem
+              className="cursor-pointer text-[13px] flex items-center justify-between"
+              onSelect={() => setTheme(resolvedTheme === "light" ? "dark" : "light")}
+            >
+              <div className="flex items-center gap-2">
+                {resolvedTheme === "light" ? <MoonIcon className="size-4" /> : <SunIcon className="size-4" />}
+                Appearance
+              </div>
+              <span className="text-[10px] text-muted-foreground uppercase font-mono opacity-50">
+                {resolvedTheme === "light" ? "Dark" : "Light"}
+              </span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild data-testid="user-nav-item-auth">

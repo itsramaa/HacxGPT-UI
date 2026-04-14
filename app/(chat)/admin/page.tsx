@@ -1,245 +1,221 @@
 "use client";
 
-import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
-import { useEffect, useState, cloneElement } from "react";
-import useSWR from "swr";
-import { 
-  UsersIcon, 
-  SettingsIcon, 
-  ShieldCheckIcon, 
-  CoinsIcon, 
-  BarChart3Icon,
-  SearchIcon,
-  BanIcon,
-  UnlockIcon,
-  UserPlusIcon,
-  RefreshCwIcon
+import {
+    ActivityIcon,
+    TerminalIcon,
+    ShieldAlertIcon,
+    ZapIcon,
+    UsersIcon,
+    CpuIcon,
+    GlobeIcon
 } from "lucide-react";
+import useSWR from "swr";
 import { toast } from "@/components/chat/toast";
-import { LoaderIcon } from "@/components/chat/icons";
+import { reportAuditLog } from "@/lib/audit";
+import { useEffect } from "react";
+import { useState } from "react";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
-const fetcher = (url: string) => fetch(url).then((res) => {
-  if (!res.ok) throw new Error("Unauthorized or not found");
-  return res.json();
-});
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
-export default function AdminPage() {
-  const { data: session, status } = useSession();
-  const router = useRouter();
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedUser, setSelectedUser] = useState<any>(null);
+export default function AdminDashboard() {
+    useEffect(() => {
+        reportAuditLog("SECURITY", "MACHINE", "Administrative session established. Remote node connected to Mainframe.");
+    }, []);
 
-  const { data: users, mutate: mutateUsers, isLoading: isLoadingUsers } = useSWR(
-    status === "authenticated" ? "/api/admin/users" : null,
-    fetcher
-  );
+    const { data: stats, isLoading: statsLoading } = useSWR("/api/admin/stats", fetcher, { refreshInterval: 5000 });
+    const { data: logs, isLoading: logsLoading } = useSWR("/api/admin/logs", fetcher, { refreshInterval: 10000 });
+    const [isSyncing, setIsSyncing] = useState(false);
+    const [confirmSyncOpen, setConfirmSyncOpen] = useState(false);
 
-  const { data: stats, isLoading: isLoadingStats } = useSWR(
-    status === "authenticated" ? "/api/admin/stats" : null,
-    fetcher
-  );
+    const handleSync = async () => {
+        setIsSyncing(true);
+        try {
+            const res = await fetch("/api/admin/sync", { method: "POST" });
+            if (!res.ok) throw new Error("Sync failed");
+            toast({ type: "success", description: "Global sync protocol completed." });
+        } catch (err: any) {
+            toast({ type: "error", description: err.message });
+        } finally {
+            setIsSyncing(false);
+        }
+    };
 
-  useEffect(() => {
-    if (status === "unauthenticated" || (session?.user && (session.user as any).role !== "admin")) {
-        // Double check via me API if role is not in JWT yet
-        fetch("/api/auth/me")
-          .then(res => res.json())
-          .then(data => {
-            if (data.role !== "admin") router.push("/");
-          })
-          .catch(() => router.push("/"));
-    }
-  }, [status, session, router]);
-
-  const updateUserStatus = async (userId: string, isActive: boolean) => {
-    try {
-      const res = await fetch(`/api/admin/users/${userId}/status?is_active=${isActive}`, {
-        method: "PATCH",
-      });
-      if (!res.ok) throw new Error("Failed to update status");
-      toast({ type: "success", description: `User ${isActive ? "unbanned" : "banned"} successfully.` });
-      mutateUsers();
-    } catch (error: any) {
-      toast({ type: "error", description: error.message });
-    }
-  };
-
-  const updateUserRole = async (userId: string, currentRole: string) => {
-    const newRole = currentRole === "admin" ? "user" : "admin";
-    if (!confirm(`Are you sure you want to change user role to ${newRole.toUpperCase()}?`)) return;
-
-    try {
-      const res = await fetch(`/api/admin/users/${userId}/role?role=${newRole}`, {
-        method: "PATCH",
-      });
-      if (!res.ok) throw new Error("Failed to update role");
-      toast({ type: "success", description: `User promoted to ${newRole} successfully.` });
-      mutateUsers();
-    } catch (error: any) {
-      toast({ type: "error", description: error.message });
-    }
-  };
-
-  const updateUserTokens = async (userId: string) => {
-    const amountStr = prompt("Enter new usage tokens amount:");
-    if (amountStr === null) return;
-    const amount = parseInt(amountStr);
-    if (isNaN(amount)) return toast({ type: "error", description: "Invalid amount" });
-
-    try {
-      const res = await fetch(`/api/admin/users/${userId}/tokens?amount=${amount}`, {
-        method: "PATCH",
-      });
-      if (!res.ok) throw new Error("Failed to update tokens");
-      toast({ type: "success", description: "Tokens updated successfully." });
-      mutateUsers();
-    } catch (error: any) {
-      toast({ type: "error", description: error.message });
-    }
-  };
-
-  const filteredUsers = users?.filter((u: any) => 
-    u.username.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    u.email.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  if (status === "loading" || isLoadingUsers) {
     return (
-      <div className="flex flex-col items-center justify-center h-full gap-4 text-muted-foreground">
-        <div className="animate-spin"><LoaderIcon /></div>
-        <p className="text-sm font-mono tracking-tighter">INITIALIZING ADMIN CONTROL INTERFACE...</p>
-      </div>
-    );
-  }
+        <>
+            <div className="flex flex-col gap-6 animate-in fade-in duration-700">
 
-  return (
-    <div className="flex flex-col h-full bg-background overflow-hidden">
-      <div className="flex flex-col gap-6 p-6 max-w-7xl mx-auto w-full overflow-y-auto">
-        
-        {/* Header & Stats */}
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-3">
-             <div className="p-2 rounded-xl bg-primary/10 text-primary">
-                <ShieldCheckIcon className="size-6" />
-             </div>
-             <div>
-                <h1 className="text-2xl font-bold tracking-tight">Mainframe Administration</h1>
-                <p className="text-muted-foreground text-sm">System metrics and user node management</p>
-             </div>
-          </div>
-        </div>
+                {/* Hero Section */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className="lg:col-span-2 p-8 rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/10 via-background to-background relative overflow-hidden group shadow-2xl">
+                        <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-all duration-1000 group-hover:scale-110">
+                            <ShieldAlertIcon className="size-64" />
+                        </div>
+                        <div className="relative z-10 flex flex-col gap-6">
+                            <div className="flex items-center gap-2">
+                                <div className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-500 text-[10px] font-black uppercase tracking-widest border border-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.2)]">
+                                    Quantum_Link: Operational
+                                </div>
+                                <div className="px-2 py-0.5 rounded bg-orange-500/10 text-orange-500 text-[10px] font-black uppercase tracking-widest border border-orange-500/20">
+                                    AES-256 Enabled
+                                </div>
+                            </div>
+                            <div className="flex flex-col gap-2">
+                                <h2 className="text-5xl font-black tracking-tighter leading-tight">
+                                    Command <span className="text-primary italic">Mainframe</span>
+                                </h2>
+                                <p className="text-muted-foreground max-w-lg text-base leading-relaxed opacity-80 font-medium">
+                                    Centralized orchestration hub for the HacxGPT ecosystem. Real-time control of neural nodes,
+                                    LLM infrastructure, and global system observability.
+                                </p>
+                            </div>
+                            <div className="flex items-center gap-4 mt-2">
+                                <div className="flex -space-x-2">
+                                    {[1, 2, 3].map((i) => (
+                                        <div key={i} className="size-8 rounded-full border-2 border-background bg-muted-foreground/20" />
+                                    ))}
+                                    <div className="size-8 rounded-full border-2 border-background bg-primary/20 flex items-center justify-center text-[10px] font-bold text-primary">
+                                        +{stats?.active_admins || 0}
+                                    </div>
+                                </div>
+                                <span className="text-xs font-mono text-muted-foreground">Active Admin Sessions</span>
+                            </div>
+                        </div>
+                    </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-           <StatCard icon={<UsersIcon />} label="Active Nodes" value={stats?.total_users ?? 0} color="primary" />
-           <StatCard icon={<BarChart3Icon />} label="Total sessions" value={stats?.total_sessions ?? 0} color="emerald" />
-           <StatCard icon={<SettingsIcon />} label="System Load" value="OPTIMAL" color="orange" />
-        </div>
+                    <div className="p-6 rounded-3xl border border-border/40 bg-card/40 backdrop-blur-xl flex flex-col gap-6 shadow-xl">
+                        <div className="flex items-center justify-between">
+                            <h3 className="text-xs font-black uppercase tracking-widest text-muted-foreground/60">System Health</h3>
+                            <div className="size-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.8)]" />
+                        </div>
+                        <div className="flex flex-col gap-4">
+                            <HealthBar label="Kernel CPU" value={stats?.health?.cpu || 0} color="primary" />
+                            <HealthBar label="Neural Memory" value={stats?.health?.memory || 0} color="orange" />
+                            <HealthBar label="I/O Throughput" value={stats?.health?.io || 0} color="emerald" />
+                            <HealthBar label="Token Reservoir" value={stats?.health?.tokens || 0} color="primary" />
+                        </div>
+                    </div>
+                </div>
 
-        {/* User Management */}
-        <div className="flex flex-col gap-4">
-            <div className="flex items-center justify-between gap-4">
-                <h2 className="text-lg font-semibold flex items-center gap-2">
-                    <UsersIcon className="size-4" /> Node Registry
-                </h2>
-                <div className="relative max-w-sm w-full">
-                    <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-                    <input 
-                      type="text" 
-                      placeholder="Search nodes by alias or email..." 
-                      className="w-full bg-muted/50 border border-border/40 rounded-lg pl-9 pr-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                    />
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                    <StatCard label="Global Nodes" value={stats?.total_users || 0} icon={<UsersIcon className="size-4" />} color="primary" />
+                    <StatCard label="Live Sessions" value={stats?.total_sessions || 0} icon={<ActivityIcon className="size-4" />} color="emerald" />
+                    <StatCard label="Active Models" value={stats?.total_models || 0} icon={<CpuIcon className="size-4" />} color="orange" />
+                    <StatCard label="LLM Providers" value={stats?.total_providers || 0} icon={<GlobeIcon className="size-4" />} color="primary" />
+                    <StatCard label="Admin Access" value={stats?.active_admins || 0} icon={<ShieldAlertIcon className="size-4" />} color="emerald" />
+                </div>
+
+                {/* Console & Activity */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="p-6 rounded-2xl border border-border/40 font-mono overflow-hidden relative group">
+                        <div className="absolute top-4 right-4 text-[10px] text-primary/30 uppercase font-black">Buffer_Stream</div>
+                        <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40 mb-4 border-b border-border/10 pb-2">Recent System Activity</h3>
+                        <div className="flex flex-col gap-1.5 text-[11px] h-32 overflow-y-auto scrollbar-hide">
+                            {(Array.isArray(logs) ? logs : logs?.items || [])?.map((log: any, i: number) => (
+                                <p key={i} className="tracking-tighter flex gap-2">
+                                    <span className="opacity-40">[{new Date(log.timestamp).toLocaleTimeString()}]</span>
+                                    <span className={log.level === 'ERROR' ? 'text-red-400' : log.level === 'WARN' ? 'text-orange-400' : 'text-emerald-400'}>
+                                        &gt; {log.module}_{log.level}:
+                                    </span>
+                                    <span className="text-muted-foreground/80">{log.message}</span>
+                                </p>
+                            ))}
+                            {!logsLoading && !(Array.isArray(logs) ? logs.length : logs?.items?.length) && (
+                                <p className="text-muted-foreground/30 italic">No activity detected.</p>
+                            )}
+                        </div>
+                        <div className="absolute bottom-4 left-6 text-primary animate-pulse">_</div>
+                    </div>
+
+                    <div className="p-6 rounded-2xl border border-border/40 bg-card/20 backdrop-blur-sm flex flex-col items-center justify-center text-center gap-4 group">
+                        <div className="p-4 rounded-full bg-primary/5 border border-primary/10 group-hover:scale-110 transition-transform duration-500">
+                            <ZapIcon className={`size-10 text-primary drop-shadow-[0_0_15px_rgba(249,115,22,0.4)] ${isSyncing ? "animate-spin" : ""}`} />
+                        </div>
+                        <div>
+                            <h4 className="font-bold text-lg">Quick Action: Global Sync</h4>
+                            <p className="text-xs text-muted-foreground max-w-xs mx-auto">Re-validate all neural nodes and LLM caches across the global cluster.</p>
+                        </div>
+                        <button
+                            onClick={() => setConfirmSyncOpen(true)}
+                            disabled={isSyncing}
+                            className="px-6 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-[0_4px_20px_rgba(249,115,22,0.3)] disabled:opacity-50 disabled:scale-100"
+                        >
+                            {isSyncing ? "Syncing..." : "Initiate Sync Protocol"}
+                        </button>
+                    </div>
                 </div>
             </div>
 
-            <div className="border border-border/40 rounded-xl overflow-hidden bg-card/30">
-                <table className="w-full text-sm text-left border-collapse">
-                    <thead className="bg-muted/30 text-muted-foreground text-[11px] uppercase tracking-wider font-bold">
-                        <tr>
-                            <th className="px-4 py-3 border-b border-border/20">Identity</th>
-                            <th className="px-4 py-3 border-b border-border/20">Role</th>
-                            <th className="px-4 py-3 border-b border-border/20">Status</th>
-                            <th className="px-4 py-3 border-b border-border/20">Usage Token</th>
-                            <th className="px-4 py-3 border-b border-border/20 text-right">Operations</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border/10">
-                        {filteredUsers?.map((u: any) => (
-                            <tr key={u.id} className="hover:bg-muted/10 transition-colors group">
-                                <td className="px-4 py-3">
-                                    <div className="flex flex-col">
-                                        <span className="font-semibold">{u.username}</span>
-                                        <span className="text-[11px] text-muted-foreground">{u.email}</span>
-                                    </div>
-                                </td>
-                                <td className="px-4 py-3">
-                                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${u.role === 'admin' ? 'bg-orange-500/10 text-orange-400 border border-orange-500/20' : 'bg-primary/10 text-primary border border-primary/20'}`}>
-                                        {u.role}
-                                    </span>
-                                </td>
-                                <td className="px-4 py-3">
-                                    <div className="flex items-center gap-2">
-                                        <div className={`size-1.5 rounded-full ${u.is_active ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`} />
-                                        <span className={u.is_active ? 'text-emerald-400' : 'text-red-400'}>
-                                            {u.is_active ? 'ACTIVE' : 'BANNED'}
-                                        </span>
-                                    </div>
-                                </td>
-                                <td className="px-4 py-3">
-                                    <button 
-                                      onClick={() => updateUserTokens(u.id)}
-                                      className="flex items-center gap-1.5 font-mono text-muted-foreground hover:text-primary transition-colors"
-                                    >
-                                        <RefreshCwIcon className="size-3" />
-                                        {u.total_usage?.toLocaleString()}
-                                    </button>
-                                </td>
-                                <td className="px-4 py-3 text-right">
-                                    <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <button 
-                                          title={u.role === 'admin' ? "Demote to User" : "Promote to Admin"}
-                                          onClick={() => updateUserRole(u.id, u.role)}
-                                          className="p-1.5 rounded-md border border-primary/30 text-primary hover:bg-primary/10"
-                                        >
-                                            <UserPlusIcon className="size-4" />
-                                        </button>
-                                        <button 
-                                          title={u.is_active ? "Ban User" : "Unban User"}
-                                          onClick={() => updateUserStatus(u.id, !u.is_active)}
-                                          className={`p-1.5 rounded-md border ${u.is_active ? 'border-red-500/30 text-red-400 hover:bg-red-500/10' : 'border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10'}`}
-                                        >
-                                            {u.is_active ? <BanIcon className="size-4" /> : <UnlockIcon className="size-4" />}
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
-        </div>
+            {/* Confirmation Protocol */}
+            <AlertDialog open={confirmSyncOpen} onOpenChange={setConfirmSyncOpen}>
+                <AlertDialogContent className="bg-card border-border/40">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="text-primary flex items-center gap-2 italic uppercase tracking-tighter">
+                            <ZapIcon size={18} /> Initiate Global_Sync?
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This protocol will disrupt neural pathways briefly to re-align all cluster nodes and purge stale edge caches.
+                            Proceed with full re-validation?
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel className="bg-muted/10 border-border/40">SECURE_ABORT</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleSync} className="bg-primary text-white font-bold">
+                            EXECUTE_SYNC
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
 
-      </div>
-    </div>
-  );
+        </>
+    );
 }
 
-function StatCard({ icon, label, value, color }: { icon: any, label: string, value: string | number, color: string }) {
-    const colorMap: any = {
+function StatCard({ label, value, icon, color }: { label: string, value: number, icon: React.ReactNode, color: "primary" | "orange" | "emerald" }) {
+    const colorClasses = {
         primary: "bg-primary/10 text-primary border-primary/20",
+        orange: "bg-orange-500/10 text-orange-500 border-orange-500/20",
         emerald: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
-        orange: "bg-orange-500/10 text-orange-400 border-orange-500/20",
     }
     return (
-        <div className={`p-4 rounded-xl border flex items-center gap-4 ${colorMap[color] || colorMap.primary}`}>
-            <div className="p-2 rounded-lg bg-background/50">
-                {cloneElement(icon, { className: "size-5" })}
+        <div className="p-5 rounded-2xl border border-border/40 bg-card/40 backdrop-blur-xl flex items-center justify-between shadow-lg group hover:border-primary/30 transition-all">
+            <div className="flex flex-col gap-1">
+                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">{label}</span>
+                <span className="text-2xl font-black tabular-nums">{value.toLocaleString()}</span>
             </div>
-            <div className="flex flex-col">
-                <span className="text-[11px] font-bold uppercase tracking-widest opacity-70">{label}</span>
-                <span className="text-xl font-bold font-mono">{value}</span>
+            <div className={`p-3 rounded-xl border ${colorClasses[color]}`}>
+                {icon}
+            </div>
+        </div>
+    )
+}
+
+function HealthBar({ label, value, color }: { label: string, value: number, color: "primary" | "orange" | "emerald" }) {
+    const colorClasses = {
+        primary: "bg-primary shadow-[0_0_10px_rgba(249,115,22,0.3)]",
+        orange: "bg-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.3)]",
+        emerald: "bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.3)]",
+    }
+    return (
+        <div className="flex flex-col gap-1.5">
+            <div className="flex items-center justify-between text-[11px] font-bold">
+                <span className="text-muted-foreground uppercase tracking-tighter">{label}</span>
+                <span className="font-mono">{value}%</span>
+            </div>
+            <div className="h-1.5 w-full bg-muted/30 rounded-full overflow-hidden">
+                <div
+                    className={`h-full rounded-full transition-all duration-1000 ${colorClasses[color]}`}
+                    style={{ width: `${value}%` }}
+                />
             </div>
         </div>
     )
