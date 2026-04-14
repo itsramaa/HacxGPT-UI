@@ -6,30 +6,30 @@ const cacheHeaders = { "Cache-Control": "no-cache, must-revalidate" };
 
 export async function GET() {
   const token = await getAccessToken();
-  
+
   try {
     // Use publicFetch to avoid auto-auth throw for guests
     const res = await publicFetch("/api/providers", {
-        headers: token ? { "Authorization": `Bearer ${token}` } : {}
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
     });
-    const providers = await res.json() as any[];
-    
+    const providers = (await res.json()) as any[];
+
     const dynamicModels: ChatModel[] = [];
     const capabilities: Record<string, any> = {};
 
     for (const p of providers) {
-      if (!p.models || !Array.isArray(p.models)) continue;
-      
+      if (!p.models || !Array.isArray(p.models)) { continue; }
+
       // Determine if a key is available specifically for this request context
-      const hasKeyAvailable = token 
-        ? (p.has_key || p.has_public_key)
-        : (p.has_public_key);
+      const hasKeyAvailable = token
+        ? p.has_key || p.has_public_key
+        : p.has_public_key;
 
       for (const m of p.models) {
         // Guests should only see models that are both public AND have a key
-        const modelHasKey = token 
-            ? (hasKeyAvailable || m.is_public)
-            : (p.has_public_key && m.is_public);
+        const modelHasKey = token
+          ? hasKeyAvailable || m.is_public
+          : p.has_public_key && m.is_public;
 
         const id = `${p.name}/${m.name}`;
         dynamicModels.push({
@@ -61,7 +61,7 @@ export async function GET() {
 
     // Filter out unusable models for guests (don't show what they can't use)
     if (!token) {
-      mergedModels = mergedModels.filter(m => m.hasKey);
+      mergedModels = mergedModels.filter((m) => m.hasKey);
     }
 
     return Response.json(
@@ -69,7 +69,10 @@ export async function GET() {
       { headers: cacheHeaders }
     );
   } catch (err) {
-    console.warn("Backend providers fetch failed or restricted, falling back to curated list.", err);
+    console.warn(
+      "Backend providers fetch failed or restricted, falling back to curated list.",
+      err
+    );
     return Response.json(
       { models: chatModels, capabilities: {} },
       { headers: cacheHeaders }

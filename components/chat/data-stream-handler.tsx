@@ -3,9 +3,9 @@
 import { useEffect } from "react";
 import { useSWRConfig } from "swr";
 import { unstable_serialize } from "swr/infinite";
+import { useActiveChat } from "@/hooks/use-active-chat";
 import { useDataStream } from "./data-stream-provider";
 import { getChatHistoryPaginationKey } from "./sidebar-history";
-import { useActiveChat } from "@/hooks/use-active-chat";
 
 export function DataStreamHandler() {
   const { dataStream, setDataStream } = useDataStream();

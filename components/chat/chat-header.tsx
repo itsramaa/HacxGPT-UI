@@ -1,14 +1,14 @@
 "use client";
 
-import { MoonIcon, PanelLeftIcon, SearchIcon, SunIcon, LogInIcon } from "lucide-react";
-import { useTheme } from "next-themes";
+import { LogInIcon, PanelLeftIcon, SearchIcon } from "lucide-react";
 import Link from "next/link";
+import { useTheme } from "next-themes";
 import { memo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useSidebar } from "@/components/ui/sidebar";
-import { VisibilitySelector, type VisibilityType } from "./visibility-selector";
 import { useActiveChat } from "@/hooks/use-active-chat";
+import type { VisibilityType } from "./visibility-selector";
 
 function PureChatHeader({
   chatId,
@@ -52,17 +52,21 @@ function PureChatHeader({
         <SearchIcon className="absolute left-2.5 top-2.5 size-4 text-muted-foreground/50" />
         <Input
           className="h-9 w-full rounded-full bg-background/50 pl-9 text-xs focus-visible:ring-primary/20"
+          onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Search within this chat..."
           type="search"
           value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
         />
       </div>
 
       <div className="flex items-center gap-2">
         {isGuest && (
-          <Button asChild size="sm" className="h-8 rounded-lg px-4 bg-primary text-primary-foreground hover:bg-primary/90 transition-all active:scale-95 text-xs font-bold">
-            <Link href="/login" className="flex items-center gap-2">
+          <Button
+            asChild
+            className="h-8 rounded-lg px-4 bg-primary text-primary-foreground hover:bg-primary/90 transition-all active:scale-95 text-xs font-bold"
+            size="sm"
+          >
+            <Link className="flex items-center gap-2" href="/login">
               <LogInIcon className="size-3.5" />
               Sign In
             </Link>

@@ -1,7 +1,13 @@
 "use client";
 
-import { ChevronUp, ShieldCheckIcon, MessageSquareIcon, MoonIcon, SunIcon } from "lucide-react";
-import { useRouter, usePathname } from "next/navigation";
+import {
+  ChevronUp,
+  MessageSquareIcon,
+  MoonIcon,
+  ShieldCheckIcon,
+  SunIcon,
+} from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
 import type { User } from "next-auth";
 import { signOut, useSession } from "next-auth/react";
 import { useTheme } from "next-themes";
@@ -42,7 +48,7 @@ export function SidebarUserNav({ user }: { user: User }) {
     status === "authenticated" ? "/api/auth/me" : null,
     async (url) => {
       const res = await fetch(url);
-      if (!res.ok) throw new Error("Failed to fetch profile");
+      if (!res.ok) { throw new Error("Failed to fetch profile"); }
       return res.json();
     },
     { revalidateOnFocus: false }
@@ -52,7 +58,8 @@ export function SidebarUserNav({ user }: { user: User }) {
   useEffect(() => {
     const handleUpdate = () => mutate();
     window.addEventListener("hacxgpt:usage-updated", handleUpdate);
-    return () => window.removeEventListener("hacxgpt:usage-updated", handleUpdate);
+    return () =>
+      window.removeEventListener("hacxgpt:usage-updated", handleUpdate);
   }, [mutate]);
 
   const displayUsage = profile?.total_usage ?? session?.user?.total_usage;
@@ -88,7 +95,10 @@ export function SidebarUserNav({ user }: { user: User }) {
                     background: `linear-gradient(135deg, oklch(0.35 0.08 ${emailToHue(user.email ?? "")}), oklch(0.25 0.05 ${emailToHue(user.email ?? "") + 40}))`,
                   }}
                 />
-                <span className="truncate text-sm font-medium ml-1" data-testid="user-email">
+                <span
+                  className="truncate text-sm font-medium ml-1"
+                  data-testid="user-email"
+                >
                   {user?.email}
                 </span>
                 <ChevronUp className="ml-auto size-4 opacity-40 group-hover:opacity-100 transition-opacity" />
@@ -114,12 +124,16 @@ export function SidebarUserNav({ user }: { user: User }) {
 
             {profile?.role === "admin" && (
               <DropdownMenuItem
-                className={`cursor-pointer text-[13px] font-semibold py-2 border-b border-border/20 rounded-none ${isAdminPath ? 'text-primary' : 'text-orange-400'}`}
+                className={`cursor-pointer text-[13px] font-semibold py-2 border-b border-border/20 rounded-none ${isAdminPath ? "text-primary" : "text-orange-400"}`}
                 onSelect={() => router.push(isAdminPath ? "/" : "/admin")}
               >
                 <div className="flex items-center gap-2">
-                   {isAdminPath ? <MessageSquareIcon className="size-4" /> : <ShieldCheckIcon className="size-4" />}
-                   {isAdminPath ? "Back to Chat" : "Admin Dashboard"}
+                  {isAdminPath ? (
+                    <MessageSquareIcon className="size-4" />
+                  ) : (
+                    <ShieldCheckIcon className="size-4" />
+                  )}
+                  {isAdminPath ? "Back to Chat" : "Admin Dashboard"}
                 </div>
               </DropdownMenuItem>
             )}
@@ -139,13 +153,19 @@ export function SidebarUserNav({ user }: { user: User }) {
             >
               Settings
             </DropdownMenuItem>
-            
+
             <DropdownMenuItem
               className="cursor-pointer text-[13px] flex items-center justify-between"
-              onSelect={() => setTheme(resolvedTheme === "light" ? "dark" : "light")}
+              onSelect={() =>
+                setTheme(resolvedTheme === "light" ? "dark" : "light")
+              }
             >
               <div className="flex items-center gap-2">
-                {resolvedTheme === "light" ? <MoonIcon className="size-4" /> : <SunIcon className="size-4" />}
+                {resolvedTheme === "light" ? (
+                  <MoonIcon className="size-4" />
+                ) : (
+                  <SunIcon className="size-4" />
+                )}
                 Appearance
               </div>
               <span className="text-[10px] text-muted-foreground uppercase font-mono opacity-50">

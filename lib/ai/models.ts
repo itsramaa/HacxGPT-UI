@@ -22,7 +22,7 @@ export type ChatModel = {
   hasKey?: boolean;
 };
 
-// These will be overridden by dynamic fetching in the UI, 
+// These will be overridden by dynamic fetching in the UI,
 // but we keep some defaults for initial render/types.
 export const chatModels: ChatModel[] = [
   {

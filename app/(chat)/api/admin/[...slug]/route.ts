@@ -1,6 +1,6 @@
+import type { NextRequest } from "next/server";
 import { auth } from "@/app/(auth)/auth";
 import { backendJSON } from "@/lib/api";
-import { NextRequest } from "next/server";
 
 async function proxyRequest(request: NextRequest, { params }: { params: any }) {
   const session = await auth();
@@ -16,22 +16,25 @@ async function proxyRequest(request: NextRequest, { params }: { params: any }) {
 
   try {
     const method = request.method;
-    let options: any = { method };
+    const options: any = { method };
 
     if (method !== "GET" && method !== "HEAD") {
-        try {
-            const body = await request.json();
-            options.body = JSON.stringify(body);
-        } catch (e) {
-            // No body or not JSON
-        }
+      try {
+        const body = await request.json();
+        options.body = JSON.stringify(body);
+      } catch (_e) {
+        // No body or not JSON
+      }
     }
 
     const data = await backendJSON<any>(finalPath, options);
     return Response.json(data);
   } catch (err: any) {
     console.error(`Error proxying admin ${request.method} ${finalPath}:`, err);
-    return Response.json({ error: err.message || "Failed to proxy request" }, { status: err.status || 500 });
+    return Response.json(
+      { error: err.message || "Failed to proxy request" },
+      { status: err.status || 500 }
+    );
   }
 }
 

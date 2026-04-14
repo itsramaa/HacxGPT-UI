@@ -284,7 +284,13 @@ export const FileIcon = ({ size = 16 }: { size?: number }) => {
   );
 };
 
-export const LoaderIcon = ({ size = 16, className }: { size?: number, className?: string }) => {
+export const LoaderIcon = ({
+  size = 16,
+  className,
+}: {
+  size?: number;
+  className?: string;
+}) => {
   return (
     <svg
       className={className}

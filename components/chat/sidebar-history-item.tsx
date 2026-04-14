@@ -6,10 +6,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuPortal,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
 import {
@@ -17,14 +13,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "../ui/sidebar";
-import {
-  CheckCircleFillIcon,
-  GlobeIcon,
-  LockIcon,
-  MoreHorizontalIcon,
-  ShareIcon,
-  TrashIcon,
-} from "./icons";
+import { MoreHorizontalIcon, TrashIcon } from "./icons";
 
 const PureChatItem = ({
   chat,
@@ -74,7 +63,7 @@ const PureChatItem = ({
         </DropdownMenuTrigger>
 
         <DropdownMenuContent align="end" side="bottom">
-{/* Share functionality hidden until implemented */}
+          {/* Share functionality hidden until implemented */}
           {/* <DropdownMenuSub>
             ...
           </DropdownMenuSub> */}
@@ -93,8 +82,8 @@ const PureChatItem = ({
 };
 
 export const ChatItem = memo(PureChatItem, (prevProps, nextProps) => {
-  if (prevProps.isActive !== nextProps.isActive) return false;
-  if (prevProps.chat.title !== nextProps.chat.title) return false;
-  if (prevProps.chat.visibility !== nextProps.chat.visibility) return false;
+  if (prevProps.isActive !== nextProps.isActive) { return false; }
+  if (prevProps.chat.title !== nextProps.chat.title) { return false; }
+  if (prevProps.chat.visibility !== nextProps.chat.visibility) { return false; }
   return true;
 });

@@ -10,14 +10,14 @@ export async function GET() {
     if (err instanceof ChatbotError && err.type === "unauthorized") {
       try {
         const res = await publicFetch("/api/keys/demo");
-        if (!res.ok) return Response.json([]);
+        if (!res.ok) { return Response.json([]); }
         const demoKeys = await res.json();
         return Response.json(demoKeys);
-      } catch (demoErr) {
+      } catch (_demoErr) {
         return Response.json([]);
       }
     }
-    if (err instanceof ChatbotError) return err.toResponse();
+    if (err instanceof ChatbotError) { return err.toResponse(); }
     console.error("Error fetching keys:", err);
     return new ChatbotError("offline:chat").toResponse();
   }
@@ -35,7 +35,7 @@ export async function POST(request: Request) {
     const data = await res.json();
     return Response.json(data, { status: res.status });
   } catch (err) {
-    if (err instanceof ChatbotError) return err.toResponse();
+    if (err instanceof ChatbotError) { return err.toResponse(); }
     console.error("Error upserting key:", err);
     return new ChatbotError("offline:chat").toResponse();
   }
@@ -45,8 +45,7 @@ export async function PATCH(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
-    if (!id)
-      return Response.json({ error: "id required" }, { status: 400 });
+    if (!id) { return Response.json({ error: "id required" }, { status: 400 }); }
 
     const body = await request.json();
     const res = await backendFetch(`/api/keys/${id}`, {
@@ -57,7 +56,7 @@ export async function PATCH(request: Request) {
 
     return Response.json(await res.json(), { status: res.status });
   } catch (err) {
-    if (err instanceof ChatbotError) return err.toResponse();
+    if (err instanceof ChatbotError) { return err.toResponse(); }
     return new ChatbotError("offline:chat").toResponse();
   }
 }
@@ -70,19 +69,21 @@ export async function DELETE(request: Request) {
 
     // Single delete via path or param
     if (id) {
-       const res = await backendFetch(`/api/keys/${id}`, {
-         method: "DELETE",
-         rawOnError: true,
-       });
-       if (!res.ok) return Response.json(await res.json(), { status: res.status });
-       return Response.json({ message: "deleted" });
+      const res = await backendFetch(`/api/keys/${id}`, {
+        method: "DELETE",
+        rawOnError: true,
+      });
+      if (!res.ok) {
+        return Response.json(await res.json(), { status: res.status });
+      }
+      return Response.json({ message: "deleted" });
     }
 
     // Bulk delete or Purge all
-    let body = undefined;
+    let body;
     try {
       body = await request.json();
-    } catch (e) {}
+    } catch (_e) {}
 
     const queryString = all ? "?all=true" : "";
     const res = await backendFetch(`/api/keys${queryString}`, {
@@ -95,10 +96,10 @@ export async function DELETE(request: Request) {
       const errData = await res.json();
       return Response.json(errData, { status: res.status });
     }
-    
+
     return Response.json(await res.json());
   } catch (err) {
-    if (err instanceof ChatbotError) return err.toResponse();
+    if (err instanceof ChatbotError) { return err.toResponse(); }
     console.error("Error deleting keys:", err);
     return new ChatbotError("offline:chat").toResponse();
   }

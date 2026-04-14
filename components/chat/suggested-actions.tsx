@@ -3,7 +3,7 @@
 import type { UseChatHelpers } from "@ai-sdk/react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
-import { memo, useMemo, useState, useEffect } from "react";
+import { memo, useEffect, useState } from "react";
 import { suggestions } from "@/lib/constants";
 import type { ChatMessage } from "@/lib/types";
 import { Suggestion } from "../ai-elements/suggestion";
@@ -20,7 +20,9 @@ function PureSuggestedActions({ chatId, sendMessage }: SuggestedActionsProps) {
   const [suggestedActions, setSuggestedActions] = useState<string[]>([]);
 
   useEffect(() => {
-    setSuggestedActions([...suggestions].sort(() => 0.5 - Math.random()).slice(0, 4));
+    setSuggestedActions(
+      [...suggestions].sort(() => 0.5 - Math.random()).slice(0, 4)
+    );
   }, []);
 
   return (

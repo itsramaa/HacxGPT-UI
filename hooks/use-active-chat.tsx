@@ -50,7 +50,10 @@ type ActiveChatContextValue = {
   setShowSettings: Dispatch<SetStateAction<boolean>>;
   switchVersion: (parentId: string, version: number) => void;
   versions: Record<string, number>;
-  handleRegenerate: (messageId: string, providedParentId?: string) => Promise<void>;
+  handleRegenerate: (
+    messageId: string,
+    providedParentId?: string
+  ) => Promise<void>;
   searchQuery: string;
   setSearchQuery: Dispatch<SetStateAction<string>>;
   activeTool: string | null;
@@ -66,7 +69,13 @@ function extractChatId(pathname: string): string | null {
   return match ? match[1] : null;
 }
 
-export function ActiveChatProvider({ children, session }: { children: ReactNode, session: any }) {
+export function ActiveChatProvider({
+  children,
+  session,
+}: {
+  children: ReactNode;
+  session: any;
+}) {
   const isGuest = !session?.user;
   const pathname = usePathname();
   const { setDataStream } = useDataStream();
@@ -93,7 +102,7 @@ export function ActiveChatProvider({ children, session }: { children: ReactNode,
 
   const setCurrentModelId = async (id: string) => {
     setCurrentModelState(id);
-    
+
     // 1. Persist to cookie for new chats inheritance
     document.cookie = `chat-model=${encodeURIComponent(id)}; path=/; max-age=31536000`;
 
@@ -111,7 +120,9 @@ export function ActiveChatProvider({ children, session }: { children: ReactNode,
             }),
           });
           // Mutate the specific chat data to reflect change locally
-          mutate(`${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/messages?chatId=${chatId}`);
+          mutate(
+            `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/messages?chatId=${chatId}`
+          );
         } catch (err) {
           console.error("Failed to sync model to backend:", err);
         }
@@ -120,13 +131,15 @@ export function ActiveChatProvider({ children, session }: { children: ReactNode,
   };
 
   const isModelAvailable = useMemo(() => {
-    if (!allModels?.models) return true; // Still allow while loading to avoid flickering
+    if (!allModels?.models) { return true; // Still allow while loading to avoid flickering
+}
     const model = allModels.models.find((m: any) => m.id === currentModelId);
-    if (!model) return false; // If model is selected but not in the list, treat as unavailable
+    if (!model) { return false; // If model is selected but not in the list, treat as unavailable
+}
     return !!model.hasKey;
   }, [allModels, currentModelId]);
 
-  // Auto-switch to available model for Guests if current one is broken 
+  // Auto-switch to available model for Guests if current one is broken
   useEffect(() => {
     if (isGuest && allModels?.models && !isModelAvailable) {
       const firstAvailable = allModels.models.find((m: any) => m.hasKey);
@@ -150,7 +163,7 @@ export function ActiveChatProvider({ children, session }: { children: ReactNode,
   const [input, setInput] = useState("");
 
   const { data: chatData, isLoading } = useSWR(
-    (isNewChat || isGuest)
+    isNewChat || isGuest
       ? null
       : `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/messages?chatId=${chatId}`,
     fetcher,
@@ -205,13 +218,15 @@ export function ActiveChatProvider({ children, session }: { children: ReactNode,
       fetch: async (url, init) => {
         const response = await fetchWithErrorHandlers(url, init);
         const actualId = response.headers.get("X-Chat-Id");
-        
+
         // If we got an ID and we were in "New Chat" mode, update the URL
         if (actualId && (actualId !== chatId || isNewChat)) {
           newChatIdRef.current = actualId;
           // Use router.replace to update the URL without losing state
-          router.replace(`${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/chat/${actualId}`);
-          
+          router.replace(
+            `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/chat/${actualId}`
+          );
+
           // Immediately mutate sidebar so the new chat shows up while generating
           setTimeout(() => {
             mutate(unstable_serialize(getChatHistoryPaginationKey));
@@ -253,40 +268,43 @@ export function ActiveChatProvider({ children, session }: { children: ReactNode,
     }),
     onData: (dataPart) => {
       setDataStream((ds) => (ds ? [...ds, dataPart as any] : []));
-      
+
       // Real-time usage update attempt
       try {
         const part = dataPart as any;
-        if (part && part.usage) {
+        if (part?.usage) {
           // If we see usage in the stream, we can at least know it's coming
-          // Revalidating the session might be too frequent here, 
+          // Revalidating the session might be too frequent here,
           // so we mostly rely on onFinish but could update a local state if needed.
         }
-      } catch (e) {}
+      } catch (_e) {}
     },
-    onFinish: (message) => {
+    onFinish: (_message) => {
       setActiveTool(null);
-      if (isGuest) return;
+      if (isGuest) { return; }
 
       const historyKey = unstable_serialize(getChatHistoryPaginationKey);
       const currentChatKey = `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/messages?chatId=${chatId}`;
-      
+
       mutate(historyKey);
       mutate(currentChatKey);
-      
+
       // Real-time usage update: Trigger session update
       // This will cause SidebarUserNav to re-fetch the user profile with new total_usage
       if (typeof window !== "undefined") {
-         // Dispatch a custom event and revalidate SWR for profile
-         window.dispatchEvent(new CustomEvent("hacxgpt:usage-updated"));
-         // If we had a specific SWR hook for profile, we'd mutate it here.
-         // For now, let's just re-fetch /api/auth/me to update the local cached session data
-         // Next-auth session is harder to force-update, but we can try to poke it.
+        // Dispatch a custom event and revalidate SWR for profile
+        window.dispatchEvent(new CustomEvent("hacxgpt:usage-updated"));
+        // If we had a specific SWR hook for profile, we'd mutate it here.
+        // For now, let's just re-fetch /api/auth/me to update the local cached session data
+        // Next-auth session is harder to force-update, but we can try to poke it.
       }
 
       // If this was a new chat starting, the title is likely being generated in background.
       // We poll a few times to ensure both sidebar and current page catch changes.
-      if (messages.length <= 3 && (chatData?.title === "New Chat" || !chatData?.title)) {
+      if (
+        messages.length <= 3 &&
+        (chatData?.title === "New Chat" || !chatData?.title)
+      ) {
         const poll = () => {
           mutate(historyKey);
           mutate(currentChatKey);
@@ -294,11 +312,11 @@ export function ActiveChatProvider({ children, session }: { children: ReactNode,
 
         setTimeout(poll, 2000);
         setTimeout(poll, 5000);
-        setTimeout(poll, 10000);
+        setTimeout(poll, 10_000);
       }
     },
     onError: (error) => {
-      const isGuestLimit = 
+      const isGuestLimit =
         (error as any).cause?.includes("Guest limit reached") ||
         error.message?.includes("Guest limit reached");
 
@@ -321,59 +339,74 @@ export function ActiveChatProvider({ children, session }: { children: ReactNode,
   const [showSettings, setShowSettings] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
-  const handleRegenerate = useCallback(async (messageId: string, providedParentId?: string) => {
-    let parentId = providedParentId;
+  const handleRegenerate = useCallback(
+    async (messageId: string, providedParentId?: string) => {
+      let parentId = providedParentId;
 
-    if (!parentId) {
-      // 1. Find the assistant message being regenerated to find its parent
-      const targetMsg = messages.find(m => m.id === messageId);
-      if (!targetMsg || targetMsg.role !== "assistant") return;
+      if (!parentId) {
+        // 1. Find the assistant message being regenerated to find its parent
+        const targetMsg = messages.find((m) => m.id === messageId);
+        if (!targetMsg || targetMsg.role !== "assistant") { return; }
 
-      // 2. Find its parent (the user message)
-      parentId = targetMsg.metadata?.parentId;
-    }
-
-    if (!parentId) {
-      toast({ type: "error", description: "Cannot regenerate: original prompt not found." });
-      return;
-    }
-
-    if (!isModelAvailable) {
-      toast({ type: "error", description: "Please configure an API key for this model first!" });
-      return;
-    }
-
-    try {
-      await sendMessage({
-        role: "assistant", 
-        parts: [{ type: "text", text: "" }],
-      }, {
-        body: { parent_id: parentId }
-      });
-    } catch (err) {
-      toast({ type: "error", description: "Regeneration failed." });
-    }
-  }, [messages, sendMessage]);
-
-  const switchVersion = useCallback(async (parentId: string, version: number) => {
-    // 1. Update local state for immediate response
-    setVersionMap(prev => ({ ...prev, [parentId]: version }));
-    
-    // 2. Persist to backend
-    if (!isNewChat) {
-      try {
-        await fetch(`/api/history/${chatId}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            active_versions: { ...versionMap, [parentId]: version }
-          }),
-        });
-      } catch (err) {
-        console.error("Failed to persist version selection:", err);
+        // 2. Find its parent (the user message)
+        parentId = targetMsg.metadata?.parentId;
       }
-    }
-  }, [chatId, isNewChat, versionMap]);
+
+      if (!parentId) {
+        toast({
+          type: "error",
+          description: "Cannot regenerate: original prompt not found.",
+        });
+        return;
+      }
+
+      if (!isModelAvailable) {
+        toast({
+          type: "error",
+          description: "Please configure an API key for this model first!",
+        });
+        return;
+      }
+
+      try {
+        await sendMessage(
+          {
+            role: "assistant",
+            parts: [{ type: "text", text: "" }],
+          },
+          {
+            body: { parent_id: parentId },
+          }
+        );
+      } catch (_err) {
+        toast({ type: "error", description: "Regeneration failed." });
+      }
+    },
+    [messages, sendMessage, isModelAvailable]
+  );
+
+  const switchVersion = useCallback(
+    async (parentId: string, version: number) => {
+      // 1. Update local state for immediate response
+      setVersionMap((prev) => ({ ...prev, [parentId]: version }));
+
+      // 2. Persist to backend
+      if (!isNewChat) {
+        try {
+          await fetch(`/api/history/${chatId}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              active_versions: { ...versionMap, [parentId]: version },
+            }),
+          });
+        } catch (err) {
+          console.error("Failed to persist version selection:", err);
+        }
+      }
+    },
+    [chatId, isNewChat, versionMap]
+  );
 
   const loadedChatIds = useRef(new Set<string>());
 
@@ -456,20 +489,25 @@ export function ActiveChatProvider({ children, session }: { children: ReactNode,
   const activeMessages = useMemo(() => {
     // 1. Group assistant messages by parentId
     const siblingsByParent: Record<string, ChatMessage[]> = {};
-    messages.forEach(m => {
+    messages.forEach((m) => {
       if (m.role === "assistant" && m.metadata?.parentId) {
-        if (!siblingsByParent[m.metadata.parentId]) siblingsByParent[m.metadata.parentId] = [];
+        if (!siblingsByParent[m.metadata.parentId]) {
+          siblingsByParent[m.metadata.parentId] = [];
+        }
         siblingsByParent[m.metadata.parentId].push(m);
       }
     });
 
     // 2. Filter: If a position has multiple versions, pick the one from versionMap or the latest one
-    return messages.filter(m => {
+    return messages.filter((m) => {
       if (m.role === "assistant" && m.metadata?.parentId) {
         const siblings = siblingsByParent[m.metadata.parentId];
-        if (siblings.length <= 1) return true;
-        
-        const selectedVersion = versionMap[m.metadata.parentId] ?? siblings[siblings.length - 1].metadata?.version ?? 1;
+        if (siblings.length <= 1) { return true; }
+
+        const selectedVersion =
+          versionMap[m.metadata.parentId] ??
+          siblings.at(-1)?.metadata?.version ??
+          1;
         return m.metadata?.version === selectedVersion;
       }
       return true;
@@ -477,10 +515,12 @@ export function ActiveChatProvider({ children, session }: { children: ReactNode,
   }, [messages, versionMap]);
 
   const filteredMessages = useMemo(() => {
-    if (!searchQuery.trim()) return activeMessages;
+    if (!searchQuery.trim()) { return activeMessages; }
     const query = searchQuery.toLowerCase();
-    return activeMessages.filter(m => 
-      m.parts?.some(p => p.type === "text" && p.text?.toLowerCase().includes(query))
+    return activeMessages.filter((m) =>
+      m.parts?.some(
+        (p) => p.type === "text" && p.text?.toLowerCase().includes(query)
+      )
     );
   }, [activeMessages, searchQuery]);
 
@@ -520,30 +560,29 @@ export function ActiveChatProvider({ children, session }: { children: ReactNode,
       isModelAvailable,
     }),
     [
-      chatId,
-      filteredMessages,
-      messages,
-      setMessages,
-      sendMessage,
-      status,
-      stop,
-      regenerate,
-      addToolApprovalResponse,
-      input,
-      visibility,
-      isReadonly,
-      isFetchingSession,
-      currentModelId,
-      showSettings,
-      versionMap,
-      setCurrentModelId,
-      setPendingAttachmentIds,
-      switchVersion,
-      handleRegenerate,
-      searchQuery,
-      setSearchQuery,
-      isGuest,
-      isModelAvailable,
+      chatId, 
+      filteredMessages, 
+      messages, 
+      setMessages, 
+      sendMessage, 
+      status, 
+      stop, 
+      regenerate, 
+      addToolApprovalResponse, 
+      input, 
+      visibility, 
+      isReadonly, 
+      isFetchingSession, 
+      currentModelId, 
+      showSettings, 
+      versionMap, 
+      setCurrentModelId, 
+      setPendingAttachmentIds, 
+      switchVersion, 
+      handleRegenerate, 
+      searchQuery, 
+      isGuest, 
+      isModelAvailable, activeTool
     ]
   );
 

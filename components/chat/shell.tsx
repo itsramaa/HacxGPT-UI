@@ -2,26 +2,16 @@
 
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { useActiveChat } from "@/hooks/use-active-chat";
 import type { Attachment, ChatMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { ChatHeader } from "./chat-header";
 import { DataStreamHandler } from "./data-stream-handler";
+import { GuestLimitDialog } from "./guest-limit-dialog";
 import { submitEditedMessage } from "./message-editor";
 import { Messages } from "./messages";
 import { MultimodalInput } from "./multimodal-input";
 import { SettingsDialog } from "./settings-dialog";
-import { GuestLimitDialog } from "./guest-limit-dialog";
 
 export function ChatShell() {
   const pathname = usePathname();
@@ -154,7 +144,6 @@ export function ChatShell() {
       <DataStreamHandler />
       <SettingsDialog onOpenChange={setShowSettings} open={showSettings} />
       <GuestLimitDialog />
-
     </>
   );
 }

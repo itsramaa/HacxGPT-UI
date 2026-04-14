@@ -45,9 +45,10 @@ export async function GET(request: Request) {
 
       if (Array.isArray(content)) {
         parts = content.map((c: any) => {
-          if (c.type === "text") return { type: "text", text: c.text };
-          if (c.type === "image_url")
+          if (c.type === "text") { return { type: "text", text: c.text }; }
+          if (c.type === "image_url") {
             return { type: "image", image: c.image_url.url };
+          }
           return c;
         });
       } else {
@@ -78,7 +79,7 @@ export async function GET(request: Request) {
       activeVersions: chatSession?.active_versions || {},
     });
   } catch (err) {
-    if (err instanceof ChatbotError) return err.toResponse();
+    if (err instanceof ChatbotError) { return err.toResponse(); }
     console.error("Error fetching messages:", err);
     return Response.json({ error: "offline" }, { status: 500 });
   }

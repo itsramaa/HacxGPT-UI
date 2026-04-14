@@ -26,7 +26,8 @@ export async function POST(request: Request) {
   if (isGuest) {
     const modelId = selectedChatModel || "hacxgpt/hacxgpt-lightning";
     const slashIdx = modelId.indexOf("/");
-    const targetModelName = slashIdx > 0 ? modelId.slice(slashIdx + 1) : modelId;
+    const targetModelName =
+      slashIdx > 0 ? modelId.slice(slashIdx + 1) : modelId;
 
     try {
       const demoRes = await publicFetch("/api/chat/demo", {
@@ -39,7 +40,10 @@ export async function POST(request: Request) {
       });
 
       if (demoRes.status === 429) {
-        return new ChatbotError("rate_limit:chat", "Guest limit reached. Please sign in.").toResponse();
+        return new ChatbotError(
+          "rate_limit:chat",
+          "Guest limit reached. Please sign in."
+        ).toResponse();
       }
 
       if (!demoRes.ok) {
@@ -50,7 +54,7 @@ export async function POST(request: Request) {
       const stream = createUIMessageStream({
         execute: async ({ writer }) => {
           const reader = demoRes.body?.getReader();
-          if (!reader) return;
+          if (!reader) { return; }
           const decoder = new TextDecoder();
           let buffer = "";
           const textPartId = generateUUID();
@@ -58,30 +62,37 @@ export async function POST(request: Request) {
 
           while (true) {
             const { done, value } = await reader.read();
-            if (done) break;
+            if (done) { break; }
             buffer += decoder.decode(value, { stream: true });
             const parts = buffer.split("\n\n");
             buffer = parts.pop() || "";
             for (const part of parts) {
-              if (!part.startsWith("data: ")) continue;
+              if (!part.startsWith("data: ")) { continue; }
               const dataStr = part.slice(6).trim();
-              if (dataStr === "[DONE]") break;
+              if (dataStr === "[DONE]") { break; }
               try {
                 const parsed = JSON.parse(dataStr);
                 if (!textStarted && (parsed.tool_call || parsed.text)) {
-                   writer.write({ type: "text-start", id: textPartId });
-                   textStarted = true;
+                  writer.write({ type: "text-start", id: textPartId });
+                  textStarted = true;
                 }
                 if (parsed.tool_call) {
-                  writer.write({ type: "data-tool-call", data: parsed.tool_call });
+                  writer.write({
+                    type: "data-tool-call",
+                    data: parsed.tool_call,
+                  });
                 } else if (parsed.text) {
-                  writer.write({ type: "text-delta", id: textPartId, delta: parsed.text });
+                  writer.write({
+                    type: "text-delta",
+                    id: textPartId,
+                    delta: parsed.text,
+                  });
                 }
               } catch (_) {}
             }
           }
         },
-        generateId: generateUUID
+        generateId: generateUUID,
       });
 
       return createUIMessageStreamResponse({ stream });
@@ -103,7 +114,9 @@ export async function POST(request: Request) {
     if (providersRes.ok) {
       const providers = await providersRes.json();
       // Match by name or ID (fallback to first provider if nothing matches)
-      const match = providers.find((p: any) => p.name === providerKey || p.id === providerKey);
+      const match = providers.find(
+        (p: any) => p.name === providerKey || p.id === providerKey
+      );
       providerId = match?.id || providers[0]?.id;
     }
   } catch (err) {
@@ -122,13 +135,16 @@ export async function POST(request: Request) {
 
     if (!checkRes.ok && checkRes.status === 404) {
       if (!providerId) {
-        return new ChatbotError("offline:chat", "No valid provider found").toResponse();
+        return new ChatbotError(
+          "offline:chat",
+          "No valid provider found"
+        ).toResponse();
       }
 
       const createRes = await backendFetch("/api/sessions", {
         method: "POST",
         body: JSON.stringify({
-          id: id,
+          id,
           title: "New Chat",
           provider_id: providerId,
           model_name: modelName,
@@ -170,15 +186,19 @@ export async function POST(request: Request) {
     }
 
     if (streamRes.status === 429) {
-        if (wasNewChat) {
-            backendFetch(`/api/sessions/${actualSessionId}`, { method: "DELETE" }).catch(() => {});
-        }
-        return new ChatbotError("rate_limit:chat").toResponse();
+      if (wasNewChat) {
+        backendFetch(`/api/sessions/${actualSessionId}`, {
+          method: "DELETE",
+        }).catch(() => {});
+      }
+      return new ChatbotError("rate_limit:chat").toResponse();
     }
 
     if (!streamRes.status || !streamRes.ok) {
       if (wasNewChat) {
-        backendFetch(`/api/sessions/${actualSessionId}`, { method: "DELETE" }).catch(() => {});
+        backendFetch(`/api/sessions/${actualSessionId}`, {
+          method: "DELETE",
+        }).catch(() => {});
       }
       return new ChatbotError("offline:chat").toResponse();
     }
@@ -187,69 +207,72 @@ export async function POST(request: Request) {
     const stream = createUIMessageStream({
       execute: async ({ writer }) => {
         const reader = streamRes.body?.getReader();
-        if (!reader) return;
+        if (!reader) { return; }
 
         const decoder = new TextDecoder();
         let buffer = "";
         const textPartId = generateUUID();
         let textStarted = false;
 
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) { break; }
 
-            buffer += decoder.decode(value, { stream: true });
-            const parts = buffer.split("\n\n");
-            buffer = parts.pop() || "";
+          buffer += decoder.decode(value, { stream: true });
+          const parts = buffer.split("\n\n");
+          buffer = parts.pop() || "";
 
-            for (const part of parts) {
-              if (!part.startsWith("data: ")) continue;
-              const dataStr = part.slice(6).trim();
-              if (dataStr === "[DONE]") break;
-              try {
-                const parsed = JSON.parse(dataStr);
+          for (const part of parts) {
+            if (!part.startsWith("data: ")) { continue; }
+            const dataStr = part.slice(6).trim();
+            if (dataStr === "[DONE]") { break; }
+            try {
+              const parsed = JSON.parse(dataStr);
 
-                // Initialize text part if anything needs to be shown
-                if (!textStarted && (parsed.error || parsed.tool_call || parsed.text)) {
-                   writer.write({
-                     type: "text-start",
-                     id: textPartId,
-                   });
-                   textStarted = true;
-                }
-
-                if (parsed.error) {
-                  writer.write({
-                    type: "text-delta",
-                    id: textPartId,
-                    delta: `\n\n*Error: ${parsed.error}*\n\n`,
-                  });
-                } else if (parsed.tool_call) {
-                  writer.write({
-                    type: "data-tool-call",
-                    data: parsed.tool_call as string,
-                  });
-                } else if (parsed.text) {
-                  writer.write({
-                    type: "text-delta",
-                    id: textPartId,
-                    delta: parsed.text,
-                  });
-                }
-              } catch (_) {
-                // ignore malformed SSE chunks
+              // Initialize text part if anything needs to be shown
+              if (
+                !textStarted &&
+                (parsed.error || parsed.tool_call || parsed.text)
+              ) {
+                writer.write({
+                  type: "text-start",
+                  id: textPartId,
+                });
+                textStarted = true;
               }
+
+              if (parsed.error) {
+                writer.write({
+                  type: "text-delta",
+                  id: textPartId,
+                  delta: `\n\n*Error: ${parsed.error}*\n\n`,
+                });
+              } else if (parsed.tool_call) {
+                writer.write({
+                  type: "data-tool-call",
+                  data: parsed.tool_call as string,
+                });
+              } else if (parsed.text) {
+                writer.write({
+                  type: "text-delta",
+                  id: textPartId,
+                  delta: parsed.text,
+                });
+              }
+            } catch (_) {
+              // ignore malformed SSE chunks
             }
           }
+        }
 
-          // Proactively trigger title generation for new chats
-          if (wasNewChat) {
-            backendFetch(`/api/chat/${actualSessionId}/generate-title`, {
-              method: "POST",
-            }).catch((err) => {
-              console.error("Failed to trigger title generation:", err);
-            });
-          }
+        // Proactively trigger title generation for new chats
+        if (wasNewChat) {
+          backendFetch(`/api/chat/${actualSessionId}/generate-title`, {
+            method: "POST",
+          }).catch((err) => {
+            console.error("Failed to trigger title generation:", err);
+          });
+        }
       },
       generateId: generateUUID,
     });
@@ -259,7 +282,7 @@ export async function POST(request: Request) {
       headers: { "X-Chat-Id": actualSessionId },
     });
   } catch (err) {
-    if (err instanceof ChatbotError) return err.toResponse();
+    if (err instanceof ChatbotError) { return err.toResponse(); }
     console.error("Error in chat proxy:", err);
     return new ChatbotError("offline:chat").toResponse();
   }
@@ -284,7 +307,7 @@ export async function DELETE(request: Request) {
     }
     return new ChatbotError("offline:chat").toResponse();
   } catch (err) {
-    if (err instanceof ChatbotError) return err.toResponse();
+    if (err instanceof ChatbotError) { return err.toResponse(); }
     return new ChatbotError("offline:chat").toResponse();
   }
 }

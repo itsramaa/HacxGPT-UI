@@ -32,8 +32,8 @@ export default auth((req: NextRequest & { auth: any }) => {
     return NextResponse.next();
   }
 
-  const isGuestAllowed = 
-    pathname.startsWith("/chat/demo") || 
+  const isGuestAllowed =
+    pathname.startsWith("/chat/demo") ||
     pathname.startsWith(`${base}/chat/demo`);
 
   if (!isLoggedIn && !isGuestAllowed) {

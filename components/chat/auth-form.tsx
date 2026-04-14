@@ -21,7 +21,10 @@ export function AuthForm({
       {mode === "register" ? (
         <>
           <div className="flex flex-col gap-2">
-            <Label className="font-normal text-muted-foreground" htmlFor="username">
+            <Label
+              className="font-normal text-muted-foreground"
+              htmlFor="username"
+            >
               Username
             </Label>
             <Input
@@ -38,7 +41,10 @@ export function AuthForm({
           </div>
 
           <div className="flex flex-col gap-2">
-            <Label className="font-normal text-muted-foreground" htmlFor="email">
+            <Label
+              className="font-normal text-muted-foreground"
+              htmlFor="email"
+            >
               Email
             </Label>
             <Input
@@ -54,7 +60,10 @@ export function AuthForm({
           </div>
 
           <div className="flex flex-col gap-2">
-            <Label className="font-normal text-muted-foreground" htmlFor="fullName">
+            <Label
+              className="font-normal text-muted-foreground"
+              htmlFor="fullName"
+            >
               Full Name
             </Label>
             <Input
@@ -69,7 +78,10 @@ export function AuthForm({
         </>
       ) : (
         <div className="flex flex-col gap-2">
-          <Label className="font-normal text-muted-foreground" htmlFor="identifier">
+          <Label
+            className="font-normal text-muted-foreground"
+            htmlFor="identifier"
+          >
             Username or Email
           </Label>
           <Input

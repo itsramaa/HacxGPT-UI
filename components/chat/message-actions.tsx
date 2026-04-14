@@ -1,13 +1,13 @@
 import { memo } from "react";
 import { toast } from "sonner";
 import { useCopyToClipboard } from "usehooks-ts";
+import { useActiveChat } from "@/hooks/use-active-chat";
 import type { ChatMessage } from "@/lib/types";
 import {
   MessageAction as Action,
   MessageActions as Actions,
 } from "../ai-elements/message";
 import { CopyIcon, PencilEditIcon, RegenerateIcon } from "./icons";
-import { useActiveChat } from "@/hooks/use-active-chat";
 
 export function PureMessageActions({
   chatId,
@@ -44,8 +44,8 @@ export function PureMessageActions({
   };
 
   const formatTokens = (n?: number) => {
-    if (!n) return null;
-    if (n >= 1000) return `${(n / 1000).toFixed(1)}k`;
+    if (!n) { return null; }
+    if (n >= 1000) { return `${(n / 1000).toFixed(1)}k`; }
     return n.toString();
   };
 
@@ -82,7 +82,8 @@ export function PureMessageActions({
     );
   }
 
-  const { promptTokens, completionTokens, totalTokens } = message.metadata || {};
+  const { promptTokens, completionTokens, totalTokens } =
+    message.metadata || {};
 
   return (
     <Actions className="-ml-0.5 opacity-0 transition-opacity duration-150 group-hover/message:opacity-100 items-center">

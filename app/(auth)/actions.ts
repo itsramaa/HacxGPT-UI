@@ -71,7 +71,7 @@ export const register = async (
       password: formData.get("password"),
     });
 
-    console.log("validate data:" + validatedData.email)
+    console.log(`validate data:${validatedData.email}`);
 
     // 1. Create account on the backend
     const res = await publicFetch("/api/auth/register", {

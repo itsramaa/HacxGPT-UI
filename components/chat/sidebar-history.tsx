@@ -131,8 +131,8 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
 
   const handleDelete = async () => {
     const chatToDelete = deleteId;
-    if (!chatToDelete) return;
-    
+    if (!chatToDelete) { return; }
+
     const isCurrentChat = pathname === `/chat/${chatToDelete}`;
 
     setShowDeleteDialog(false);
@@ -160,15 +160,15 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
         `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/chat?id=${chatToDelete}`,
         { method: "DELETE" }
       );
-      
+
       if (!response.ok) {
         throw new Error("Failed to delete chat");
       }
-      
+
       toast.success("Chat deleted");
       // Revalidate to sync with server
       mutate();
-    } catch (error) {
+    } catch (_error) {
       toast.error("Failed to delete chat. Please try again.");
       // Rollback on error
       mutate();

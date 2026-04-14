@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import { backendFetch, backendJSON } from "@/lib/api";
-import type { Chat } from "@/lib/types";
 import { ChatbotError } from "@/lib/errors";
+import type { Chat } from "@/lib/types";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
@@ -38,22 +38,22 @@ export async function GET(request: NextRequest) {
     let paginated = mappedChats;
     if (startingAfter) {
       const idx = paginated.findIndex((c) => c.id === startingAfter);
-      if (idx !== -1) paginated = paginated.slice(idx + 1);
+      if (idx !== -1) { paginated = paginated.slice(idx + 1); }
     } else if (endingBefore) {
       const idx = paginated.findIndex((c) => c.id === endingBefore);
-      if (idx !== -1) paginated = paginated.slice(0, idx);
+      if (idx !== -1) { paginated = paginated.slice(0, idx); }
     }
 
     const sliced = paginated.slice(0, limit);
     const hasMore = paginated.length > limit;
 
-    return Response.json({ 
-      chats: sliced, 
+    return Response.json({
+      chats: sliced,
       hasMore,
-      total: mappedChats.length
+      total: mappedChats.length,
     });
   } catch (err) {
-    if (err instanceof ChatbotError) return err.toResponse();
+    if (err instanceof ChatbotError) { return err.toResponse(); }
     console.error("Error fetching history:", err);
     return new ChatbotError("offline:chat").toResponse();
   }
@@ -72,7 +72,7 @@ export async function DELETE() {
     );
     return Response.json("ok", { status: 200 });
   } catch (err) {
-    if (err instanceof ChatbotError) return err.toResponse();
+    if (err instanceof ChatbotError) { return err.toResponse(); }
     return new ChatbotError("offline:chat").toResponse();
   }
 }

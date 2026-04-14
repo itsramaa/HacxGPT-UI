@@ -1,25 +1,24 @@
 "use client";
 
 import {
-  ArrowLeftIcon,
   MessageSquareIcon,
   PanelLeftIcon,
   PenSquareIcon,
   TrashIcon,
 } from "lucide-react";
 import Link from "next/link";
-import { useRouter, usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import type { User } from "next-auth";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useSWRConfig } from "swr";
 import { unstable_serialize } from "swr/infinite";
+import { SidebarAdmin } from "@/components/chat/sidebar-admin";
 import {
   getChatHistoryPaginationKey,
   SidebarHistory,
 } from "@/components/chat/sidebar-history";
 import { SidebarUserNav } from "@/components/chat/sidebar-user-nav";
-import { SidebarAdmin } from "@/components/chat/sidebar-admin";
 import {
   Sidebar,
   SidebarContent,
@@ -64,9 +63,12 @@ export function AppSidebar({ user }: { user: User | undefined }) {
     });
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/history`, {
-        method: "DELETE",
-      });
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/history`,
+        {
+          method: "DELETE",
+        }
+      );
 
       if (!response.ok) {
         throw new Error("Failed to delete all chats");
@@ -75,7 +77,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
       toast.success("All chats deleted");
       // Revalidate to sync with server
       mutate(unstable_serialize(getChatHistoryPaginationKey));
-    } catch (error) {
+    } catch (_error) {
       toast.error("Failed to delete all chats. Please try again.");
       // Rollback/Sync
       mutate(unstable_serialize(getChatHistoryPaginationKey));
@@ -174,7 +176,9 @@ export function AppSidebar({ user }: { user: User | undefined }) {
           {user && <SidebarUserNav user={user} />}
           <div className="px-2 py-1 text-[10px] text-sidebar-foreground/30 flex items-center justify-between group-data-[collapsible=icon]:hidden">
             <span>© 2026 Holycan</span>
-            <span className="opacity-50">v{process.env.NEXT_PUBLIC_APP_VERSION || "1.2.0"}</span>
+            <span className="opacity-50">
+              v{process.env.NEXT_PUBLIC_APP_VERSION || "1.2.0"}
+            </span>
           </div>
         </SidebarFooter>
         <SidebarRail />

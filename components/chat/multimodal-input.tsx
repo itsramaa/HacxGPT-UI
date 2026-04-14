@@ -3,7 +3,7 @@
 import type { UseChatHelpers } from "@ai-sdk/react";
 import type { UIMessage } from "ai";
 import equal from "fast-deep-equal";
-import { ArrowUpIcon, BrainIcon, EyeIcon, PlusIcon, WrenchIcon, ZapIcon } from "lucide-react";
+import { ArrowUpIcon, PlusIcon, ZapIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import {
@@ -13,26 +13,13 @@ import {
   type SetStateAction,
   useCallback,
   useEffect,
-  useMemo,
   useRef,
   useState,
 } from "react";
 import { toast } from "sonner";
 import useSWR from "swr";
 import { useLocalStorage, useWindowSize } from "usehooks-ts";
-import { useActiveChat } from "@/hooks/use-active-chat";
-import {
-  ModelSelector,
-  ModelSelectorContent,
-  ModelSelectorEmpty,
-  ModelSelectorGroup,
-  ModelSelectorInput,
-  ModelSelectorItem,
-  ModelSelectorList,
-  ModelSelectorLogo,
-  ModelSelectorName,
-  ModelSelectorTrigger,
-} from "@/components/ai-elements/model-selector";
+import { ModelSelectorLogo } from "@/components/ai-elements/model-selector";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -44,7 +31,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ChevronRightIcon } from "lucide-react";
+import { useActiveChat } from "@/hooks/use-active-chat";
 import {
   type ChatModel,
   chatModels,
@@ -106,8 +93,8 @@ function PureMultimodalInput({
   messages: UIMessage[];
   setMessages: UseChatHelpers<ChatMessage>["setMessages"];
   sendMessage:
-  | UseChatHelpers<ChatMessage>["sendMessage"]
-  | (() => Promise<void>);
+    | UseChatHelpers<ChatMessage>["sendMessage"]
+    | (() => Promise<void>);
   className?: string;
   selectedVisibilityType: VisibilityType;
   selectedModelId: string;
@@ -261,24 +248,29 @@ function PureMultimodalInput({
         const errData = await response.json();
         if (errData.detail) {
           if (Array.isArray(errData.detail)) {
-            errorMsg = errData.detail[0]?.msg || JSON.stringify(errData.detail[0]);
-          } else if (typeof errData.detail === 'object') {
+            errorMsg =
+              errData.detail[0]?.msg || JSON.stringify(errData.detail[0]);
+          } else if (typeof errData.detail === "object") {
             errorMsg = errData.detail.msg || JSON.stringify(errData.detail);
           } else {
             errorMsg = errData.detail;
           }
         } else if (errData.error) {
-          errorMsg = typeof errData.error === 'string' ? errData.error : (errData.error.msg || "Unknown error");
+          errorMsg =
+            typeof errData.error === "string"
+              ? errData.error
+              : errData.error.msg || "Unknown error";
         } else if (Array.isArray(errData) && errData[0]?.msg) {
           errorMsg = errData[0].msg;
         } else if (errData.msg) {
           errorMsg = errData.msg;
         }
-      } catch (e) {
+      } catch (_e) {
         // Fallback to default if not JSON
       }
-      toast.error(typeof errorMsg === 'string' ? errorMsg : "Failed to upload file");
-
+      toast.error(
+        typeof errorMsg === "string" ? errorMsg : "Failed to upload file"
+      );
     } catch (_error) {
       toast.error("Failed to upload file, please try again!");
     }
@@ -311,16 +303,18 @@ function PureMultimodalInput({
       );
 
       // Check if any required upload failed
-      if (uploadedAttachments.some(a => (a as any).uploadFailed)) {
+      if (uploadedAttachments.some((a) => (a as any).uploadFailed)) {
         setIsUploading(false);
         return;
       }
 
-      const validAttachments = uploadedAttachments.filter(a => a.id && !a.id.toString().startsWith("temp-"));
+      const validAttachments = uploadedAttachments.filter(
+        (a) => a.id && !a.id.toString().startsWith("temp-")
+      );
 
       // Register attachment IDs in the global context
       if (validAttachments.length > 0) {
-        setPendingAttachmentIds(validAttachments.map(a => a.id));
+        setPendingAttachmentIds(validAttachments.map((a) => a.id));
       }
 
       // 2. Clear inputs and history
@@ -354,7 +348,7 @@ function PureMultimodalInput({
       if (width && width > 768) {
         textareaRef.current?.focus();
       }
-    } catch (error) {
+    } catch (_error) {
       toast.error("Failed to process message attachments");
     } finally {
       setIsUploading(false);
@@ -370,28 +364,27 @@ function PureMultimodalInput({
     chatId,
     uploadFile,
     editingMessage,
-    setPendingAttachmentIds
+    setPendingAttachmentIds,
   ]);
-
 
   const handleFileChange = useCallback(
     async (event: ChangeEvent<HTMLInputElement>) => {
       const files = Array.from(event.target.files || []);
-      if (files.length === 0) return;
+      if (files.length === 0) { return; }
 
-      const newAttachments: Attachment[] = files.map(file => ({
+      const newAttachments: Attachment[] = files.map((file) => ({
         id: `temp-${Math.random()}`,
         name: file.name,
         url: URL.createObjectURL(file),
         contentType: file.type,
         size: file.size,
-        file: file
+        file,
       }));
 
       setAttachments((current) => [...current, ...newAttachments]);
 
       // Reset input
-      if (event.target) event.target.value = "";
+      if (event.target) { event.target.value = ""; }
     },
     [setAttachments]
   );
@@ -399,26 +392,26 @@ function PureMultimodalInput({
   const handlePaste = useCallback(
     async (event: ClipboardEvent) => {
       const items = event.clipboardData?.items;
-      if (!items) return;
+      if (!items) { return; }
 
       const imageItems = Array.from(items).filter((item) =>
         item.type.startsWith("image/")
       );
 
-      if (imageItems.length === 0) return;
+      if (imageItems.length === 0) { return; }
 
       event.preventDefault();
 
       const newAttachments: Attachment[] = imageItems
         .map((item) => item.getAsFile())
         .filter((file): file is File => file !== null)
-        .map(file => ({
+        .map((file) => ({
           id: `temp-${Math.random()}`,
           name: "Pasted Image",
           url: URL.createObjectURL(file),
           contentType: file.type,
           size: file.size,
-          file: file
+          file,
         }));
 
       setAttachments((current) => [...current, ...newAttachments]);
@@ -608,12 +601,16 @@ function PureMultimodalInput({
             <PromptInputSubmit
               className={cn(
                 "h-7 w-7 rounded-xl transition-all duration-200",
-                ((input.trim() || attachments.length > 0) && isModelAvailable)
+                (input.trim() || attachments.length > 0) && isModelAvailable
                   ? "bg-foreground text-background hover:opacity-85 active:scale-95"
                   : "bg-muted text-muted-foreground/25 cursor-not-allowed"
               )}
               data-testid="send-button"
-              disabled={(!input.trim() && attachments.length === 0) || isUploading || !isModelAvailable}
+              disabled={
+                (!input.trim() && attachments.length === 0) ||
+                isUploading ||
+                !isModelAvailable
+              }
               status={status}
               variant="secondary"
             >
@@ -675,7 +672,7 @@ function PureAttachmentsButton({
 
   const caps: Record<string, ModelCapabilities> | undefined =
     modelsResponse?.capabilities ?? modelsResponse;
-  const hasVision = caps?.[selectedModelId]?.vision ?? false;
+  const _hasVision = caps?.[selectedModelId]?.vision ?? false;
 
   return (
     <Button
@@ -705,10 +702,11 @@ function PureModelSelectorCompact({
   onModelChange?: (modelId: string) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const { data: modelsData, error, isLoading } = useSWR(
-    "/api/models",
-    (url: string) => fetch(url).then(r => r.json())
-  );
+  const {
+    data: modelsData,
+    error,
+    isLoading,
+  } = useSWR("/api/models", (url: string) => fetch(url).then((r) => r.json()));
 
   const dynamicModels: ChatModel[] | undefined = modelsData?.models;
   const activeModels = dynamicModels ?? chatModels;
@@ -723,7 +721,7 @@ function PureModelSelectorCompact({
 
   for (const model of activeModels) {
     const pName = model.providerName || "HacxGPT";
-    if (!providerGroups[pName]) providerGroups[pName] = [];
+    if (!providerGroups[pName]) { providerGroups[pName] = []; }
     providerGroups[pName].push(model);
     // If any model in the group has hasKey: true, or if it's the internal provider
     if (model.hasKey || pName === "hacxgpt") {
@@ -732,12 +730,16 @@ function PureModelSelectorCompact({
   }
 
   const pNames = Object.keys(providerGroups);
-  const availableProviders = pNames.filter(name => providerHasKey[name]).sort((a, b) => {
-    if (a === "HacxGPT") return -1;
-    if (b === "HacxGPT") return 1;
-    return a.localeCompare(b);
-  });
-  const missingKeyProviders = pNames.filter(name => !providerHasKey[name]).sort((a, b) => a.localeCompare(b));
+  const availableProviders = pNames
+    .filter((name) => providerHasKey[name])
+    .sort((a, b) => {
+      if (a === "HacxGPT") { return -1; }
+      if (b === "HacxGPT") { return 1; }
+      return a.localeCompare(b);
+    });
+  const missingKeyProviders = pNames
+    .filter((name) => !providerHasKey[name])
+    .sort((a, b) => a.localeCompare(b));
 
   return (
     <DropdownMenu onOpenChange={setOpen} open={open}>
@@ -748,7 +750,10 @@ function PureModelSelectorCompact({
           variant="ghost"
         >
           <div className="flex items-center gap-1.5 truncate">
-            <ModelSelectorLogo provider={selectedModel?.providerName || "other"} className="size-3" />
+            <ModelSelectorLogo
+              className="size-3"
+              provider={selectedModel?.providerName || "other"}
+            />
             <span className="truncate">{selectedModel?.name}</span>
           </div>
         </Button>
@@ -756,25 +761,27 @@ function PureModelSelectorCompact({
 
       <DropdownMenuContent
         align="start"
+        className="w-[210px] p-2 rounded-2xl backdrop-blur-3xl bg-card/80 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.5)] border border-white/10 animate-in fade-in zoom-in-95 duration-200 ease-out"
         side="top"
         sideOffset={12}
-        className="w-[210px] p-2 rounded-2xl backdrop-blur-3xl bg-card/80 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.5)] border border-white/10 animate-in fade-in zoom-in-95 duration-200 ease-out"
       >
         <DropdownMenuGroup className="flex flex-col gap-1">
           {availableProviders.length > 0 && (
             <>
               <div className="px-3 py-2 mb-1">
-                <span className="text-[9px] font-black text-emerald-400/60 uppercase tracking-[2px]">Available</span>
+                <span className="text-[9px] font-black text-emerald-400/60 uppercase tracking-[2px]">
+                  Available
+                </span>
               </div>
               {availableProviders.map((pName) => (
                 <ProviderSubMenu
-                  key={pName}
-                  pName={pName}
-                  models={providerGroups[pName]}
-                  selectedModelId={selectedModelId}
-                  onModelChange={onModelChange}
-                  setOpen={setOpen}
                   hasKey={true}
+                  key={pName}
+                  models={providerGroups[pName]}
+                  onModelChange={onModelChange}
+                  pName={pName}
+                  selectedModelId={selectedModelId}
+                  setOpen={setOpen}
                 />
               ))}
             </>
@@ -782,19 +789,23 @@ function PureModelSelectorCompact({
 
           {missingKeyProviders.length > 0 && (
             <>
-              {availableProviders.length > 0 && <div className="h-px bg-white/5 my-1 mx-2" />}
+              {availableProviders.length > 0 && (
+                <div className="h-px bg-white/5 my-1 mx-2" />
+              )}
               <div className="px-3 py-2 mb-1">
-                <span className="text-[9px] font-black text-rose-400/60 uppercase tracking-[2px]">No API Key</span>
+                <span className="text-[9px] font-black text-rose-400/60 uppercase tracking-[2px]">
+                  No API Key
+                </span>
               </div>
               {missingKeyProviders.map((pName) => (
                 <ProviderSubMenu
-                  key={pName}
-                  pName={pName}
-                  models={providerGroups[pName]}
-                  selectedModelId={selectedModelId}
-                  onModelChange={onModelChange}
-                  setOpen={setOpen}
                   hasKey={false}
+                  key={pName}
+                  models={providerGroups[pName]}
+                  onModelChange={onModelChange}
+                  pName={pName}
+                  selectedModelId={selectedModelId}
+                  setOpen={setOpen}
                 />
               ))}
             </>
@@ -811,7 +822,7 @@ function ProviderSubMenu({
   selectedModelId,
   onModelChange,
   setOpen,
-  hasKey
+  hasKey,
 }: {
   pName: string;
   models: ChatModel[];
@@ -827,59 +838,79 @@ function ProviderSubMenu({
           "flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl cursor-default transition-all duration-200 text-[13px] font-bold outline-none",
           hasKey
             ? "focus:bg-primary/20 focus:text-primary data-[state=open]:bg-primary/20 data-[state=open]:text-primary"
-          : "opacity-80 focus:bg-white/5"
+            : "opacity-80 focus:bg-white/5"
         )}
       >
         <div className="flex items-center gap-2">
-          <ModelSelectorLogo provider={pName} className="size-3.5" />
+          <ModelSelectorLogo className="size-3.5" provider={pName} />
           <span className="capitalize">{pName}</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="text-[10px] opacity-40 font-mono tracking-tighter">{models.length}</span>
+          <span className="text-[10px] opacity-40 font-mono tracking-tighter">
+            {models.length}
+          </span>
         </div>
       </DropdownMenuSubTrigger>
 
       <DropdownMenuPortal>
         <DropdownMenuSubContent
-          sideOffset={6}
           className="w-[260px] p-2 rounded-2xl backdrop-blur-3xl bg-card/90 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.5)] border border-white/10 max-h-[480px] overflow-y-auto scrollbar-hide animate-in fade-in slide-in-from-left-2 duration-200 ease-out"
+          sideOffset={6}
         >
           <div className="px-3 py-2.5 mb-1.5 flex items-center justify-between border-b border-white/5 bg-white/5 rounded-xl">
             <div className="flex items-center gap-2">
-              <ModelSelectorLogo provider={pName} className="size-3.5" />
-              <span className="text-[10px] font-black text-foreground uppercase tracking-[1px]">{pName} Models</span>
+              <ModelSelectorLogo className="size-3.5" provider={pName} />
+              <span className="text-[10px] font-black text-foreground uppercase tracking-[1px]">
+                {pName} Models
+              </span>
             </div>
             {!hasKey && (
-              <span className="text-[8px] font-bold bg-rose-500/20 text-rose-400 px-1.5 py-0.5 rounded uppercase tracking-wider">Key Required</span>
+              <span className="text-[8px] font-bold bg-rose-500/20 text-rose-400 px-1.5 py-0.5 rounded uppercase tracking-wider">
+                Key Required
+              </span>
             )}
           </div>
 
           {models.map((model) => (
             <DropdownMenuItem
-              key={model.id}
-              onSelect={() => {
-                onModelChange?.(model.id);
-                setCookie("chat-model", model.id);
-                setOpen(false);
-                setTimeout(() => {
-                  document.querySelector<HTMLTextAreaElement>("[data-testid='multimodal-input']")?.focus();
-                }, 50);
-              }}
               className={cn(
                 "flex flex-col items-start gap-1 p-3 rounded-xl transition-all duration-200 border border-transparent outline-none m-0.5 cursor-pointer",
                 model.id === selectedModelId
                   ? "bg-primary text-primary-foreground shadow-[0_4px_12px_rgba(var(--primary),0.3)] border-white/10"
                   : "focus:bg-white/5 hover:bg-white/5 hover:text-foreground active:scale-[0.98]"
               )}
+              key={model.id}
+              onSelect={() => {
+                onModelChange?.(model.id);
+                setCookie("chat-model", model.id);
+                setOpen(false);
+                setTimeout(() => {
+                  document
+                    .querySelector<HTMLTextAreaElement>(
+                      "[data-testid='multimodal-input']"
+                    )
+                    ?.focus();
+                }, 50);
+              }}
             >
               <div className="w-full flex items-center justify-between">
-                <span className="text-[13px] font-bold tracking-tight">{model.name}</span>
-                {model.id === selectedModelId && <div className="size-1.5 rounded-full bg-white shadow-[0_0_8px_white]" />}
+                <span className="text-[13px] font-bold tracking-tight">
+                  {model.name}
+                </span>
+                {model.id === selectedModelId && (
+                  <div className="size-1.5 rounded-full bg-white shadow-[0_0_8px_white]" />
+                )}
               </div>
-              <span className={cn(
-                "text-[9px] font-mono opacity-60 truncate w-full",
-                model.id === selectedModelId ? "text-primary-foreground/80" : "text-muted-foreground"
-              )}>{model.id}</span>
+              <span
+                className={cn(
+                  "text-[9px] font-mono opacity-60 truncate w-full",
+                  model.id === selectedModelId
+                    ? "text-primary-foreground/80"
+                    : "text-muted-foreground"
+                )}
+              >
+                {model.id}
+              </span>
             </DropdownMenuItem>
           ))}
         </DropdownMenuSubContent>
@@ -888,28 +919,44 @@ function ProviderSubMenu({
   );
 }
 
-function ApiKeySelectorCompact({ selectedModelId, status }: { selectedModelId: string, status: UseChatHelpers<ChatMessage>["status"] }) {
+function ApiKeySelectorCompact({
+  selectedModelId,
+  status,
+}: {
+  selectedModelId: string;
+  status: UseChatHelpers<ChatMessage>["status"];
+}) {
   const router = useRouter();
-  const { data: keys } = useSWR("/api/keys", (url) => fetch(url).then(r => r.json()));
-  const { data: modelsData } = useSWR("/api/models", (url) => fetch(url).then(r => r.json()));
+  const { data: keys } = useSWR("/api/keys", (url) =>
+    fetch(url).then((r) => r.json())
+  );
+  const { data: modelsData } = useSWR("/api/models", (url) =>
+    fetch(url).then((r) => r.json())
+  );
 
-  const [selectedKeyId, setSelectedKeyId] = useLocalStorage<string>("selected-api-key", "");
+  const [selectedKeyId, setSelectedKeyId] = useLocalStorage<string>(
+    "selected-api-key",
+    ""
+  );
 
   const models = modelsData?.models || chatModels;
   const currentModel = models.find((m: any) => m.id === selectedModelId);
 
   // Filter keys for this provider
-  const availableKeys = (Array.isArray(keys) ? keys : []).filter((k: any) => k.provider_id === currentModel?.providerId && k.is_active);
+  const availableKeys = (Array.isArray(keys) ? keys : []).filter(
+    (k: any) => k.provider_id === currentModel?.providerId && k.is_active
+  );
 
-  const activeKey = availableKeys.find((k: any) => k.id === selectedKeyId) || availableKeys[0];
+  const activeKey =
+    availableKeys.find((k: any) => k.id === selectedKeyId) || availableKeys[0];
 
   if (availableKeys.length === 0) {
     return (
       <Button
         className="h-7 max-w-[120px] justify-between gap-1 rounded-md px-1.5 text-[10px] font-black text-destructive transition-colors uppercase tracking-tighter hover:text-destructive hover:bg-destructive/10"
-        variant="ghost"
         disabled={status !== "ready"}
         onClick={() => router.push("/settings")}
+        variant="ghost"
       >
         <div className="flex items-center gap-1 truncate">
           <PlusIcon className="size-2.5" />
@@ -924,8 +971,8 @@ function ApiKeySelectorCompact({ selectedModelId, status }: { selectedModelId: s
       <DropdownMenuTrigger asChild>
         <Button
           className="h-7 max-w-[120px] justify-between gap-1 rounded-md px-1.5 text-[10px] font-black text-primary/80 transition-colors uppercase tracking-tighter hover:text-primary hover:bg-transparent disabled:opacity-30 disabled:cursor-not-allowed"
-          variant="ghost"
           disabled={status !== "ready"}
+          variant="ghost"
         >
           <div className="flex items-center gap-1 truncate">
             <ZapIcon className="size-2.5" />
@@ -933,18 +980,23 @@ function ApiKeySelectorCompact({ selectedModelId, status }: { selectedModelId: s
           </div>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" side="top" sideOffset={12} className="w-[180px] p-1.5 rounded-xl backdrop-blur-2xl border-border/40 bg-card/90">
+      <DropdownMenuContent
+        align="start"
+        className="w-[180px] p-1.5 rounded-xl backdrop-blur-2xl border-border/40 bg-card/90"
+        side="top"
+        sideOffset={12}
+      >
         <div className="px-2 py-1.5 text-[9px] font-black text-muted-foreground uppercase tracking-widest border-b border-border/10 mb-1">
           Collection Keys
         </div>
         {availableKeys.map((k: any) => (
           <DropdownMenuItem
-            key={k.id}
-            onSelect={() => setSelectedKeyId(k.id)}
             className={cn(
               "flex flex-col items-start gap-0.5 p-2 rounded-lg cursor-pointer focus:bg-primary/5",
               selectedKeyId === k.id && "bg-primary/5"
             )}
+            key={k.id}
+            onSelect={() => setSelectedKeyId(k.id)}
           >
             <span className="text-[11px] font-bold">{k.name}</span>
             <span className="text-[9px] text-muted-foreground font-mono opacity-50 truncate w-full italic">

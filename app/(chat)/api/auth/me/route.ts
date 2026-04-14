@@ -3,7 +3,7 @@ import { backendJSON } from "@/lib/api";
 
 export async function GET() {
   const session = await auth();
-  
+
   if (!session?.user?.accessToken) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }

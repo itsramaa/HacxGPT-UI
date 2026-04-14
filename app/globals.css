@@ -511,7 +511,8 @@ textarea:focus-visible {
   @apply font-bold text-primary;
 }
 
-.markdown-content ul, .markdown-content ol {
+.markdown-content ul,
+.markdown-content ol {
   @apply mb-4 pl-5 space-y-1.5 list-outside;
 }
 
@@ -539,11 +540,18 @@ textarea:focus-visible {
   @apply my-4 border-l-2 border-primary/30 pl-4 italic text-muted-foreground bg-primary/5 py-2 rounded-r-lg;
 }
 
-.markdown-content h1, .markdown-content h2, .markdown-content h3 {
+.markdown-content h1,
+.markdown-content h2,
+.markdown-content h3 {
   @apply mt-6 mb-3 font-bold text-foreground border-b border-border/50 pb-1 w-fit;
 }
 
-.markdown-content h1 { @apply text-lg; }
-.markdown-content h2 { @apply text-base; }
-.markdown-content h3 { @apply text-sm uppercase tracking-wider; }
-
+.markdown-content h1 {
+  @apply text-lg;
+}
+.markdown-content h2 {
+  @apply text-base;
+}
+.markdown-content h3 {
+  @apply text-sm uppercase tracking-wider;
+}

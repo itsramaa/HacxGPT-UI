@@ -65,7 +65,7 @@ export const {
             body: new URLSearchParams({ username, password }) as any,
           });
 
-          if (!res.ok) return null;
+          if (!res.ok) { return null; }
 
           const data = await res.json();
           const token: string = data.access_token;
@@ -79,7 +79,7 @@ export const {
             { headers: { Authorization: `Bearer ${token}` } }
           );
 
-          if (!profileRes.ok) return null;
+          if (!profileRes.ok) { return null; }
           const profile = await profileRes.json();
 
           return {
@@ -120,9 +120,7 @@ export const {
         // Expose the access token to server-side session callers;
         // it is NOT sent to the browser (the cookie handles that).
         session.user.accessToken = token.accessToken as string | undefined;
-        session.user.total_usage = token.total_usage as
-          | number
-          | undefined;
+        session.user.total_usage = token.total_usage as number | undefined;
       }
 
       return session;

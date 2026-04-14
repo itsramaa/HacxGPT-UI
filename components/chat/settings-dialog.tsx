@@ -2,14 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,9 +12,17 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { LoaderIcon } from "./icons";
 import { cn } from "@/lib/utils";
+import { LoaderIcon } from "./icons";
 
 type Provider = {
   id: string;
@@ -56,12 +56,15 @@ export function SettingsDialog({
   const ITEMS_PER_PAGE = 5;
   const [providerPage, setProviderPage] = useState(1);
   const [keyPage, setKeyPage] = useState(1);
- 
+
   // Confirmation states
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [confirmPurgeOpen, setConfirmPurgeOpen] = useState(false);
   const [confirmBulkOpen, setConfirmBulkOpen] = useState(false);
-  const [pendingDeleteData, setPendingDeleteData] = useState<{id: string, name: string} | null>(null);
+  const [pendingDeleteData, setPendingDeleteData] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
 
   // Form state for adding a new key
   const [selectedProviderId, setSelectedProviderId] = useState("");
@@ -75,8 +78,8 @@ export function SettingsDialog({
         fetch("/api/providers"),
         fetch("/api/keys"),
       ]);
-      if (pRes.ok) setProviders(await pRes.json());
-      if (kRes.ok) setKeys(await kRes.json());
+      if (pRes.ok) { setProviders(await pRes.json()); }
+      if (kRes.ok) { setKeys(await kRes.json()); }
     } catch (err) {
       console.error(err);
     } finally {
@@ -88,7 +91,7 @@ export function SettingsDialog({
     if (open) {
       fetchData();
     }
-  }, [open]);
+  }, [open, fetchData]);
 
   const handleRegisterKey = async () => {
     if (!selectedProviderId || !keyName || !apiKeyValue) {
@@ -119,15 +122,17 @@ export function SettingsDialog({
         if (error.detail) {
           if (Array.isArray(error.detail)) {
             errorMsg = error.detail[0]?.msg || JSON.stringify(error.detail[0]);
-          } else if (typeof error.detail === 'object') {
+          } else if (typeof error.detail === "object") {
             errorMsg = error.detail.msg || JSON.stringify(error.detail);
           } else {
             errorMsg = error.detail;
           }
         }
-        toast.error(typeof errorMsg === 'string' ? errorMsg : "Failed to register key");
+        toast.error(
+          typeof errorMsg === "string" ? errorMsg : "Failed to register key"
+        );
       }
-    } catch (err) {
+    } catch (_err) {
       toast.error("An error occurred while saving the key");
     } finally {
       setIsSaving(false);
@@ -137,7 +142,7 @@ export function SettingsDialog({
   const [selectedKeyIds, setSelectedKeyIds] = useState<Set<string>>(new Set());
 
   const executeBulkDelete = async () => {
-    if (selectedKeyIds.size === 0) return;
+    if (selectedKeyIds.size === 0) { return; }
     try {
       const ids = Array.from(selectedKeyIds);
       const res = await fetch("/api/keys", {
@@ -151,7 +156,7 @@ export function SettingsDialog({
         setSelectedKeyIds(new Set());
         fetchData();
       }
-    } catch (err) {
+    } catch (_err) {
       toast.error("Bulk deletion failed");
     } finally {
       setConfirmBulkOpen(false);
@@ -159,7 +164,7 @@ export function SettingsDialog({
   };
 
   const handleBulkDelete = () => {
-    if (selectedKeyIds.size > 0) setConfirmBulkOpen(true);
+    if (selectedKeyIds.size > 0) { setConfirmBulkOpen(true); }
   };
 
   const executePurgeAll = async () => {
@@ -170,7 +175,7 @@ export function SettingsDialog({
         setSelectedKeyIds(new Set());
         fetchData();
       }
-    } catch (err) {
+    } catch (_err) {
       toast.error("Failed to wipe vault");
     } finally {
       setConfirmPurgeOpen(false);
@@ -189,13 +194,13 @@ export function SettingsDialog({
 
   const toggleSelectOne = (id: string) => {
     const next = new Set(selectedKeyIds);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
+    if (next.has(id)) { next.delete(id); }
+    else { next.add(id); }
     setSelectedKeyIds(next);
   };
 
   const executeDeleteKey = async () => {
-    if (!pendingDeleteData) return;
+    if (!pendingDeleteData) { return; }
     try {
       const res = await fetch(`/api/keys/${pendingDeleteData.id}`, {
         method: "DELETE",
@@ -207,7 +212,7 @@ export function SettingsDialog({
       } else {
         toast.error("Failed to delete key");
       }
-    } catch (err) {
+    } catch (_err) {
       toast.error("An error occurred while deleting the key");
     } finally {
       setConfirmDeleteOpen(false);
@@ -221,10 +226,16 @@ export function SettingsDialog({
   };
 
   // Pagination Logic
-  const paginatedProviders = providers.slice((providerPage - 1) * ITEMS_PER_PAGE, providerPage * ITEMS_PER_PAGE);
+  const paginatedProviders = providers.slice(
+    (providerPage - 1) * ITEMS_PER_PAGE,
+    providerPage * ITEMS_PER_PAGE
+  );
   const totalProviderPages = Math.ceil(providers.length / ITEMS_PER_PAGE);
 
-  const paginatedKeys = keys.slice((keyPage - 1) * ITEMS_PER_PAGE, keyPage * ITEMS_PER_PAGE);
+  const paginatedKeys = keys.slice(
+    (keyPage - 1) * ITEMS_PER_PAGE,
+    keyPage * ITEMS_PER_PAGE
+  );
   const totalKeyPages = Math.ceil(keys.length / ITEMS_PER_PAGE);
 
   return (
@@ -294,7 +305,10 @@ export function SettingsDialog({
                   <Button
                     className="h-9 px-6 font-semibold"
                     disabled={
-                      isSaving || !keyName || !apiKeyValue || !selectedProviderId
+                      isSaving ||
+                      !keyName ||
+                      !apiKeyValue ||
+                      !selectedProviderId
                     }
                     onClick={handleRegisterKey}
                   >
@@ -313,10 +327,10 @@ export function SettingsDialog({
                 Provider Ecosystem
               </h3>
               <div className="flex items-center gap-2">
-                <Button 
-                  className="h-6 w-6 p-0" 
-                  disabled={providerPage === 1} 
-                  onClick={() => setProviderPage(p => p - 1)}
+                <Button
+                  className="h-6 w-6 p-0"
+                  disabled={providerPage === 1}
+                  onClick={() => setProviderPage((p) => p - 1)}
                   variant="outline"
                 >
                   &lt;
@@ -324,10 +338,13 @@ export function SettingsDialog({
                 <span className="text-[10px] text-muted-foreground font-medium">
                   {providerPage} / {Math.max(1, totalProviderPages)}
                 </span>
-                <Button 
-                  className="h-6 w-6 p-0" 
-                  disabled={providerPage === totalProviderPages || totalProviderPages === 0} 
-                  onClick={() => setProviderPage(p => p + 1)}
+                <Button
+                  className="h-6 w-6 p-0"
+                  disabled={
+                    providerPage === totalProviderPages ||
+                    totalProviderPages === 0
+                  }
+                  onClick={() => setProviderPage((p) => p + 1)}
                   variant="outline"
                 >
                   &gt;
@@ -337,18 +354,29 @@ export function SettingsDialog({
 
             <div className="grid grid-cols-1 gap-2">
               {isLoading ? (
-                <div className="py-8 flex justify-center"><LoaderIcon className="animate-spin" size={16} /></div>
+                <div className="py-8 flex justify-center">
+                  <LoaderIcon className="animate-spin" size={16} />
+                </div>
               ) : paginatedProviders.length === 0 ? (
-                <div className="text-center py-4 text-xs text-muted-foreground border border-dashed rounded-lg">No providers found</div>
+                <div className="text-center py-4 text-xs text-muted-foreground border border-dashed rounded-lg">
+                  No providers found
+                </div>
               ) : (
-                paginatedProviders.map(p => (
-                  <div key={p.id} className="flex items-center justify-between p-3 rounded-lg border border-border/30 bg-background/30">
+                paginatedProviders.map((p) => (
+                  <div
+                    className="flex items-center justify-between p-3 rounded-lg border border-border/30 bg-background/30"
+                    key={p.id}
+                  >
                     <div className="flex flex-col">
                       <span className="text-sm font-medium">{p.name}</span>
-                      <span className="text-[10px] text-muted-foreground truncate max-w-[200px]">{p.base_url}</span>
+                      <span className="text-[10px] text-muted-foreground truncate max-w-[200px]">
+                        {p.base_url}
+                      </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${p.is_active ? "bg-emerald-500/10 text-emerald-500" : "bg-red-500/10 text-red-500"}`}>
+                      <span
+                        className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${p.is_active ? "bg-emerald-500/10 text-emerald-500" : "bg-red-500/10 text-red-500"}`}
+                      >
                         {p.is_active ? "Verified" : "Offline"}
                       </span>
                     </div>
@@ -368,33 +396,43 @@ export function SettingsDialog({
               <div className="flex items-center gap-4">
                 {keys.length > 0 && (
                   <div className="flex items-center gap-2 pr-4 border-r border-border/20">
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
+                    <Button
                       className="h-7 text-[9px] font-black tracking-tight flex items-center gap-1.5 hover:bg-zinc-500/10"
                       onClick={toggleSelectAll}
+                      size="sm"
+                      variant="ghost"
                     >
-                      <div className={cn("size-3 rounded border border-foreground/30 flex items-center justify-center", selectedKeyIds.size === keys.length && "bg-primary border-primary")}>
-                        {selectedKeyIds.size === keys.length && <div className="size-1 bg-white rounded-full" />}
+                      <div
+                        className={cn(
+                          "size-3 rounded border border-foreground/30 flex items-center justify-center",
+                          selectedKeyIds.size === keys.length &&
+                            "bg-primary border-primary"
+                        )}
+                      >
+                        {selectedKeyIds.size === keys.length && (
+                          <div className="size-1 bg-white rounded-full" />
+                        )}
                       </div>
-                      {selectedKeyIds.size === keys.length ? "DESELECT ALL" : "SELECT ALL"}
+                      {selectedKeyIds.size === keys.length
+                        ? "DESELECT ALL"
+                        : "SELECT ALL"}
                     </Button>
-                    
+
                     {selectedKeyIds.size > 0 ? (
-                      <Button 
-                        variant="destructive" 
-                        size="sm" 
+                      <Button
                         className="h-7 text-[10px] font-black px-3"
                         onClick={handleBulkDelete}
+                        size="sm"
+                        variant="destructive"
                       >
                         DELETE ({selectedKeyIds.size})
                       </Button>
                     ) : (
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
+                      <Button
                         className="h-7 text-[10px] font-black text-muted-foreground hover:text-red-400"
                         onClick={handlePurgeAll}
+                        size="sm"
+                        variant="ghost"
                       >
                         PURGE ALL
                       </Button>
@@ -403,10 +441,10 @@ export function SettingsDialog({
                 )}
 
                 <div className="flex items-center gap-2">
-                  <Button 
-                    className="h-6 w-6 p-0" 
-                    disabled={keyPage === 1} 
-                    onClick={() => setKeyPage(p => p - 1)}
+                  <Button
+                    className="h-6 w-6 p-0"
+                    disabled={keyPage === 1}
+                    onClick={() => setKeyPage((p) => p - 1)}
                     variant="outline"
                   >
                     &lt;
@@ -414,10 +452,10 @@ export function SettingsDialog({
                   <span className="text-[10px] text-muted-foreground font-medium">
                     {keyPage} / {Math.max(1, totalKeyPages)}
                   </span>
-                  <Button 
-                    className="h-6 w-6 p-0" 
-                    disabled={keyPage === totalKeyPages || totalKeyPages === 0} 
-                    onClick={() => setKeyPage(p => p + 1)}
+                  <Button
+                    className="h-6 w-6 p-0"
+                    disabled={keyPage === totalKeyPages || totalKeyPages === 0}
+                    onClick={() => setKeyPage((p) => p + 1)}
                     variant="outline"
                   >
                     &gt;
@@ -425,16 +463,19 @@ export function SettingsDialog({
                 </div>
               </div>
             </div>
-            
+
             {isLoading ? (
               <div className="py-12 flex flex-col items-center justify-center gap-3 text-muted-foreground animate-pulse">
-                <LoaderIcon className="animate-spin" size={16}/>
-                <span className="text-xs font-medium">Fetching secure vault...</span>
+                <LoaderIcon className="animate-spin" size={16} />
+                <span className="text-xs font-medium">
+                  Fetching secure vault...
+                </span>
               </div>
             ) : keys.length === 0 ? (
               <div className="py-12 rounded-xl border border-dashed border-border/60 flex flex-col items-center justify-center text-center px-6">
                 <p className="text-sm text-muted-foreground max-w-xs">
-                  No API keys registered yet. Add one above to start chatting with advanced models.
+                  No API keys registered yet. Add one above to start chatting
+                  with advanced models.
                 </p>
               </div>
             ) : (
@@ -443,29 +484,33 @@ export function SettingsDialog({
                   <div
                     className={cn(
                       "group flex flex-col md:flex-row md:items-center justify-between p-4 rounded-xl border transition-all gap-4 relative overflow-hidden",
-                      selectedKeyIds.has(key.id) 
-                        ? "border-primary/40 bg-primary/5 shadow-inner" 
+                      selectedKeyIds.has(key.id)
+                        ? "border-primary/40 bg-primary/5 shadow-inner"
                         : "border-border/30 bg-background/50 hover:bg-zinc-500/5 shadow-sm"
                     )}
                     key={key.id}
                   >
                     <div className="flex items-center gap-4">
-                      <button 
-                        type="button"
-                        onClick={() => toggleSelectOne(key.id)}
+                      <button
                         className={cn(
                           "size-4 rounded border transition-all flex items-center justify-center",
-                          selectedKeyIds.has(key.id) 
-                            ? "bg-primary border-primary text-white" 
+                          selectedKeyIds.has(key.id)
+                            ? "bg-primary border-primary text-white"
                             : "border-border/60 hover:border-primary/60 bg-white/5"
                         )}
+                        onClick={() => toggleSelectOne(key.id)}
+                        type="button"
                       >
-                        {selectedKeyIds.has(key.id) && <div className="size-1.5 bg-white rounded-full" />}
+                        {selectedKeyIds.has(key.id) && (
+                          <div className="size-1.5 bg-white rounded-full" />
+                        )}
                       </button>
 
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
-                          <span className="font-semibold text-sm">{key.name}</span>
+                          <span className="font-semibold text-sm">
+                            {key.name}
+                          </span>
                           <span className="px-1.5 py-0.5 rounded-md bg-zinc-500/10 text-zinc-500 text-[10px] font-bold uppercase">
                             {key.provider?.name || "unknown"}
                           </span>
@@ -477,22 +522,34 @@ export function SettingsDialog({
                         </div>
                         <div className="flex flex-col gap-0.5 text-[10px] text-muted-foreground font-medium">
                           <span className="flex items-center gap-1 opacity-70">
-                            Last used: {key.last_used_at ? new Date(key.last_used_at).toLocaleString(undefined, {
-                              dateStyle: 'medium',
-                              timeStyle: 'short'
-                            }) : "Never"}
+                            Last used:{" "}
+                            {key.last_used_at
+                              ? new Date(key.last_used_at).toLocaleString(
+                                  undefined,
+                                  {
+                                    dateStyle: "medium",
+                                    timeStyle: "short",
+                                  }
+                                )
+                              : "Never"}
                           </span>
-                          {key.last_error && <span className="text-red-400 font-bold truncate max-w-[200px]">— {key.last_error}</span>}
+                          {key.last_error && (
+                            <span className="text-red-400 font-bold truncate max-w-[200px]">
+                              — {key.last_error}
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-4">
-                      <div className={`px-2 py-0.5 rounded text-[10px] font-black tracking-tighter ${
-                        key.is_active 
-                          ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20" 
-                          : "bg-amber-500/10 text-amber-500 border border-amber-500/20"
-                      }`}>
+                      <div
+                        className={`px-2 py-0.5 rounded text-[10px] font-black tracking-tighter ${
+                          key.is_active
+                            ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20"
+                            : "bg-amber-500/10 text-amber-500 border border-amber-500/20"
+                        }`}
+                      >
                         {key.is_active ? "ACTIVE" : "STANDBY"}
                       </div>
                       <Button
@@ -510,62 +567,88 @@ export function SettingsDialog({
             )}
           </section>
         </div>
-        
+
         <div className="p-4 border-t border-border/10 bg-zinc-500/5 text-center">
           <p className="text-[10px] text-muted-foreground flex items-center justify-center gap-1">
-             Your credentials are securely encrypted before storage.
+            Your credentials are securely encrypted before storage.
           </p>
         </div>
 
         {/* Action Confirmations */}
-        <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
+        <AlertDialog
+          onOpenChange={setConfirmDeleteOpen}
+          open={confirmDeleteOpen}
+        >
           <AlertDialogContent className="bg-card border-border/40">
             <AlertDialogHeader>
               <AlertDialogTitle>Purge Shared Connection?</AlertDialogTitle>
               <AlertDialogDescription>
-                Permanently remove <span className="text-primary font-bold">"{pendingDeleteData?.name}"</span> from the vault. 
-                Any active sessions tied to this key will fail immediately.
+                Permanently remove{" "}
+                <span className="text-primary font-bold">
+                  "{pendingDeleteData?.name}"
+                </span>{" "}
+                from the vault. Any active sessions tied to this key will fail
+                immediately.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>ABORT</AlertDialogCancel>
-              <AlertDialogAction onClick={executeDeleteKey} className="bg-destructive text-destructive-foreground">PURGE_NODE</AlertDialogAction>
+              <AlertDialogAction
+                className="bg-destructive text-destructive-foreground"
+                onClick={executeDeleteKey}
+              >
+                PURGE_NODE
+              </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
 
-        <AlertDialog open={confirmBulkOpen} onOpenChange={setConfirmBulkOpen}>
+        <AlertDialog onOpenChange={setConfirmBulkOpen} open={confirmBulkOpen}>
           <AlertDialogContent className="bg-card border-border/40">
             <AlertDialogHeader>
               <AlertDialogTitle>Execute Bulk Purge?</AlertDialogTitle>
               <AlertDialogDescription>
-                Wipe <span className="text-primary font-bold">{selectedKeyIds.size} selected connections</span>. 
-                This batch operation is irreversible.
+                Wipe{" "}
+                <span className="text-primary font-bold">
+                  {selectedKeyIds.size} selected connections
+                </span>
+                . This batch operation is irreversible.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>ABORT</AlertDialogCancel>
-              <AlertDialogAction onClick={executeBulkDelete} className="bg-destructive text-destructive-foreground">EXECUTE_WIPE</AlertDialogAction>
+              <AlertDialogAction
+                className="bg-destructive text-destructive-foreground"
+                onClick={executeBulkDelete}
+              >
+                EXECUTE_WIPE
+              </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
 
-        <AlertDialog open={confirmPurgeOpen} onOpenChange={setConfirmPurgeOpen}>
+        <AlertDialog onOpenChange={setConfirmPurgeOpen} open={confirmPurgeOpen}>
           <AlertDialogContent className="bg-card border-border/40">
             <AlertDialogHeader>
-              <AlertDialogTitle className="text-destructive">CRITICAL_VAULT_RESET</AlertDialogTitle>
+              <AlertDialogTitle className="text-destructive">
+                CRITICAL_VAULT_RESET
+              </AlertDialogTitle>
               <AlertDialogDescription>
-                You are about to wipe your entire API key reservoir. 
-                All communication channels will be severed. Continue?
+                You are about to wipe your entire API key reservoir. All
+                communication channels will be severed. Continue?
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>SECURE_ABORT</AlertDialogCancel>
-              <AlertDialogAction onClick={executePurgeAll} className="bg-destructive text-destructive-foreground">WIPE_TOTAL_VAULT</AlertDialogAction>
+              <AlertDialogAction
+                className="bg-destructive text-destructive-foreground"
+                onClick={executePurgeAll}
+              >
+                WIPE_TOTAL_VAULT
+              </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-
       </DialogContent>
     </Dialog>
   );

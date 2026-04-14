@@ -22,13 +22,13 @@ export async function PATCH(
     const data = await res.json();
     return Response.json(data);
   } catch (err) {
-    if (err instanceof ChatbotError) return err.toResponse();
+    if (err instanceof ChatbotError) { return err.toResponse(); }
     return Response.json({ error: "offline" }, { status: 500 });
   }
 }
 
 export async function DELETE(
-  request: Request,
+  _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
@@ -39,13 +39,13 @@ export async function DELETE(
     });
 
     if (!res.ok) {
-        const error = await res.json();
-        return Response.json(error, { status: res.status });
+      const error = await res.json();
+      return Response.json(error, { status: res.status });
     }
 
     return Response.json({ success: true });
   } catch (err) {
-    if (err instanceof ChatbotError) return err.toResponse();
+    if (err instanceof ChatbotError) { return err.toResponse(); }
     return Response.json({ error: "offline" }, { status: 500 });
   }
 }
