@@ -40,12 +40,8 @@ export function ChatShell() {
     visibilityType,
     isReadonly,
     isLoading,
-    votes,
     currentModelId,
     setCurrentModelId,
-    showCreditCardAlert,
-    setShowCreditCardAlert,
-    setPendingAttachmentIds,
     showSettings,
     setShowSettings,
   } = useActiveChat();
@@ -107,7 +103,6 @@ export function ChatShell() {
               selectedModelId={currentModelId}
               setMessages={setMessages}
               status={status}
-              votes={votes}
             />
 
             <div className="sticky bottom-0 z-1 mx-auto flex w-full max-w-4xl gap-2 border-t-0 bg-background px-2 pb-3 md:px-4 md:pb-4">
@@ -140,13 +135,6 @@ export function ChatShell() {
                           setInput("");
                         }
                       : (msg) => {
-                          // Register attachment IDs before sending
-                          const ids = attachments
-                            .filter((a) => a.id)
-                            .map((a) => a.id as string);
-                          if (ids.length > 0) {
-                            setPendingAttachmentIds(ids);
-                          }
                           return sendMessage(msg);
                         }
                   }
@@ -165,35 +153,6 @@ export function ChatShell() {
       <DataStreamHandler />
       <SettingsDialog onOpenChange={setShowSettings} open={showSettings} />
 
-      <AlertDialog
-        onOpenChange={setShowCreditCardAlert}
-        open={showCreditCardAlert}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Activate AI Gateway</AlertDialogTitle>
-            <AlertDialogDescription>
-              This application requires{" "}
-              {process.env.NODE_ENV === "production" ? "the owner" : "you"} to
-              activate Vercel AI Gateway.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                window.open(
-                  "https://vercel.com/d?to=%2F%5Bteam%5D%2F%7E%2Fai%3Fmodal%3Dadd-credit-card",
-                  "_blank"
-                );
-                window.location.href = `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/`;
-              }}
-            >
-              Activate
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </>
   );
 }

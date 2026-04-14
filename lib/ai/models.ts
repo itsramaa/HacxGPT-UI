@@ -1,11 +1,10 @@
-export const DEFAULT_CHAT_MODEL = "moonshotai/kimi-k2-0905";
+export const DEFAULT_CHAT_MODEL = "hacxgpt/hacxgpt-lightning";
 
 export const titleModel = {
-  id: "mistral/mistral-small",
-  name: "Mistral Small",
-  provider: "mistral",
-  description: "Fast model for title generation",
-  gatewayOrder: ["mistral"],
+  id: "openai/gpt-4o-mini",
+  name: "GPT-4o Mini",
+  provider: "openai",
+  description: "Efficient model for title generation",
 };
 
 export type ModelCapabilities = {
@@ -15,72 +14,30 @@ export type ModelCapabilities = {
 };
 
 export type ChatModel = {
-  id: string;
-  name: string;
-  provider: string;
+  id: string; // The backend model name (e.g. 'gpt-4o')
+  name: string; // The display name
+  providerId: string; // UUID of the provider
+  providerName: string; // Display name of provider (e.g. 'openai')
   description: string;
-  gatewayOrder?: string[];
-  reasoningEffort?: "none" | "minimal" | "low" | "medium" | "high";
+  hasKey?: boolean;
 };
 
+// These will be overridden by dynamic fetching in the UI, 
+// but we keep some defaults for initial render/types.
 export const chatModels: ChatModel[] = [
   {
-    id: "deepseek/deepseek-v3.2",
-    name: "DeepSeek V3.2",
-    provider: "deepseek",
-    description: "Fast and capable model with tool use",
-    gatewayOrder: ["bedrock", "deepinfra"],
+    id: "hacxgpt-lightning",
+    name: "Lightning (Default)",
+    providerId: "", // To be filled by dynamic fetch
+    providerName: "hacxgpt",
+    description: "Fast and efficient flagship model",
   },
   {
-    id: "mistral/codestral",
-    name: "Codestral",
-    provider: "mistral",
-    description: "Code-focused model with tool use",
-    gatewayOrder: ["mistral"],
-  },
-  {
-    id: "mistral/mistral-small",
-    name: "Mistral Small",
-    provider: "mistral",
-    description: "Fast vision model with tool use",
-    gatewayOrder: ["mistral"],
-  },
-  {
-    id: "moonshotai/kimi-k2-0905",
-    name: "Kimi K2 0905",
-    provider: "moonshotai",
-    description: "Fast model with tool use",
-    gatewayOrder: ["baseten", "fireworks"],
-  },
-  {
-    id: "moonshotai/kimi-k2.5",
-    name: "Kimi K2.5",
-    provider: "moonshotai",
-    description: "Moonshot AI flagship model",
-    gatewayOrder: ["fireworks", "bedrock"],
-  },
-  {
-    id: "openai/gpt-oss-20b",
-    name: "GPT OSS 20B",
-    provider: "openai",
-    description: "Compact reasoning model",
-    gatewayOrder: ["groq", "bedrock"],
-    reasoningEffort: "low",
-  },
-  {
-    id: "openai/gpt-oss-120b",
-    name: "GPT OSS 120B",
-    provider: "openai",
-    description: "Open-source 120B parameter model",
-    gatewayOrder: ["fireworks", "bedrock"],
-    reasoningEffort: "low",
-  },
-  {
-    id: "xai/grok-4.1-fast-non-reasoning",
-    name: "Grok 4.1 Fast",
-    provider: "xai",
-    description: "Fast non-reasoning model with tool use",
-    gatewayOrder: ["xai"],
+    id: "gpt-4o",
+    name: "GPT-4o",
+    providerId: "",
+    providerName: "openai",
+    description: "OpenAI's flagship multimodal model",
   },
 ];
 
@@ -178,10 +135,10 @@ export const allowedModelIds = new Set(chatModels.map((m) => m.id));
 
 export const modelsByProvider = chatModels.reduce(
   (acc, model) => {
-    if (!acc[model.provider]) {
-      acc[model.provider] = [];
+    if (!acc[model.providerName]) {
+      acc[model.providerName] = [];
     }
-    acc[model.provider].push(model);
+    acc[model.providerName].push(model);
     return acc;
   },
   {} as Record<string, ChatModel[]>

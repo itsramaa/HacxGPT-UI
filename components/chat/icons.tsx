@@ -284,9 +284,10 @@ export const FileIcon = ({ size = 16 }: { size?: number }) => {
   );
 };
 
-export const LoaderIcon = ({ size = 16 }: { size?: number }) => {
+export const LoaderIcon = ({ size = 16, className }: { size?: number, className?: string }) => {
   return (
     <svg
+      className={className}
       height={size}
       strokeLinejoin="round"
       style={{ color: "currentcolor" }}
@@ -1211,3 +1212,20 @@ export const WarningIcon = ({ size = 16 }: { size?: number }) => {
     </svg>
   );
 };
+
+export const RegenerateIcon = ({ size = 16 }: { size?: number }) => (
+  <svg
+    height={size}
+    strokeLinejoin="round"
+    style={{ color: "currentcolor" }}
+    viewBox="0 0 16 16"
+    width={size}
+  >
+    <path
+      clipRule="evenodd"
+      d="M3.32766 4.31215C4.46979 3.16127 6.0402 2.5 7.75 2.5C11.2018 2.5 14 5.29822 14 8.75C14 12.2018 11.2018 15 7.75 15C5.46738 15 3.46824 13.78 2.37344 11.9702L1.87574 11.1474L3.17544 10.362L3.67313 11.1849C4.54572 12.6273 6.071 13.5 7.75 13.5C10.3734 13.5 12.5 11.3734 12.5 8.75C12.5 6.12665 10.3734 4 7.75 4C6.44857 4 5.25304 4.5 4.38379 5.37803L3.85346 5.91371L6.5 5.91371V7.41371H1.5H0.75V6.66371V1.66371H2.25V4.65451L2.8028 4.09612L3.32766 4.31215Z"
+      fill="currentColor"
+      fillRule="evenodd"
+    />
+  </svg>
+);

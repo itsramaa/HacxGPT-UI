@@ -1,31 +1,27 @@
-import equal from "fast-deep-equal";
 import { memo } from "react";
 import { toast } from "sonner";
-import { useSWRConfig } from "swr";
 import { useCopyToClipboard } from "usehooks-ts";
-import type { Vote } from "@/lib/db/schema";
 import type { ChatMessage } from "@/lib/types";
 import {
   MessageAction as Action,
   MessageActions as Actions,
 } from "../ai-elements/message";
-import { CopyIcon, PencilEditIcon, ThumbDownIcon, ThumbUpIcon } from "./icons";
+import { CopyIcon, PencilEditIcon, RegenerateIcon } from "./icons";
+import { useActiveChat } from "@/hooks/use-active-chat";
 
 export function PureMessageActions({
   chatId,
   message,
-  vote,
   isLoading,
   onEdit,
 }: {
   chatId: string;
   message: ChatMessage;
-  vote: Vote | undefined;
   isLoading: boolean;
   onEdit?: () => void;
 }) {
-  const { mutate } = useSWRConfig();
   const [_, copyToClipboard] = useCopyToClipboard();
+  const { handleRegenerate } = useActiveChat();
 
   if (isLoading) {
     return null;
@@ -47,6 +43,12 @@ export function PureMessageActions({
     toast.success("Copied to clipboard!");
   };
 
+  const formatTokens = (n?: number) => {
+    if (!n) return null;
+    if (n >= 1000) return `${(n / 1000).toFixed(1)}k`;
+    return n.toString();
+  };
+
   if (message.role === "user") {
     return (
       <Actions className="-mr-0.5 justify-end opacity-0 transition-opacity duration-150 group-hover/message:opacity-100">
@@ -63,6 +65,13 @@ export function PureMessageActions({
           )}
           <Action
             className="size-7 text-muted-foreground/50 hover:text-foreground"
+            onClick={() => handleRegenerate("", message.id)}
+            tooltip="Regenerate"
+          >
+            <RegenerateIcon size={14} />
+          </Action>
+          <Action
+            className="size-7 text-muted-foreground/50 hover:text-foreground"
             onClick={handleCopy}
             tooltip="Copy"
           >
@@ -73,8 +82,10 @@ export function PureMessageActions({
     );
   }
 
+  const { promptTokens, completionTokens, totalTokens } = message.metadata || {};
+
   return (
-    <Actions className="-ml-0.5 opacity-0 transition-opacity duration-150 group-hover/message:opacity-100">
+    <Actions className="-ml-0.5 opacity-0 transition-opacity duration-150 group-hover/message:opacity-100 items-center">
       <Action
         className="text-muted-foreground/50 hover:text-foreground"
         onClick={handleCopy}
@@ -83,111 +94,15 @@ export function PureMessageActions({
         <CopyIcon />
       </Action>
 
-      <Action
-        className="text-muted-foreground/50 hover:text-foreground"
-        data-testid="message-upvote"
-        disabled={vote?.isUpvoted}
-        onClick={() => {
-          const upvote = fetch(
-            `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/vote`,
-            {
-              method: "PATCH",
-              body: JSON.stringify({
-                chatId,
-                messageId: message.id,
-                type: "up",
-              }),
-            }
-          );
-
-          toast.promise(upvote, {
-            loading: "Upvoting Response...",
-            success: () => {
-              mutate<Vote[]>(
-                `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/vote?chatId=${chatId}`,
-                (currentVotes) => {
-                  if (!currentVotes) {
-                    return [];
-                  }
-
-                  const votesWithoutCurrent = currentVotes.filter(
-                    (currentVote) => currentVote.messageId !== message.id
-                  );
-
-                  return [
-                    ...votesWithoutCurrent,
-                    {
-                      chatId,
-                      messageId: message.id,
-                      isUpvoted: true,
-                    },
-                  ];
-                },
-                { revalidate: false }
-              );
-
-              return "Upvoted Response!";
-            },
-            error: "Failed to upvote response.",
-          });
-        }}
-        tooltip="Upvote Response"
-      >
-        <ThumbUpIcon />
-      </Action>
-
-      <Action
-        className="text-muted-foreground/50 hover:text-foreground"
-        data-testid="message-downvote"
-        disabled={vote && !vote.isUpvoted}
-        onClick={() => {
-          const downvote = fetch(
-            `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/vote`,
-            {
-              method: "PATCH",
-              body: JSON.stringify({
-                chatId,
-                messageId: message.id,
-                type: "down",
-              }),
-            }
-          );
-
-          toast.promise(downvote, {
-            loading: "Downvoting Response...",
-            success: () => {
-              mutate<Vote[]>(
-                `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/vote?chatId=${chatId}`,
-                (currentVotes) => {
-                  if (!currentVotes) {
-                    return [];
-                  }
-
-                  const votesWithoutCurrent = currentVotes.filter(
-                    (currentVote) => currentVote.messageId !== message.id
-                  );
-
-                  return [
-                    ...votesWithoutCurrent,
-                    {
-                      chatId,
-                      messageId: message.id,
-                      isUpvoted: false,
-                    },
-                  ];
-                },
-                { revalidate: false }
-              );
-
-              return "Downvoted Response!";
-            },
-            error: "Failed to downvote response.",
-          });
-        }}
-        tooltip="Downvote Response"
-      >
-        <ThumbDownIcon />
-      </Action>
+      {totalTokens !== undefined && totalTokens > 0 && (
+        <Action
+          className="h-6 w-auto px-1.5 text-[10px] font-mono text-muted-foreground/40 hover:text-primary transition-colors flex items-center gap-1 cursor-default"
+          tooltip={`Prompt: ${promptTokens?.toLocaleString()} | Out: ${completionTokens?.toLocaleString()} | Total: ${totalTokens?.toLocaleString()} Tokens`}
+        >
+          <div className="size-1 rounded-full bg-primary/30" />
+          {formatTokens(totalTokens)}
+        </Action>
+      )}
     </Actions>
   );
 }
@@ -195,9 +110,6 @@ export function PureMessageActions({
 export const MessageActions = memo(
   PureMessageActions,
   (prevProps, nextProps) => {
-    if (!equal(prevProps.vote, nextProps.vote)) {
-      return false;
-    }
     if (prevProps.isLoading !== nextProps.isLoading) {
       return false;
     }

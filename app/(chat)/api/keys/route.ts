@@ -1,126 +1,94 @@
-import { auth } from "@/app/(auth)/auth";
+import { backendFetch, backendJSON } from "@/lib/api";
 import { ChatbotError } from "@/lib/errors";
 
-const BACKEND_URL = process.env.BACKEND_API_URL || "http://127.0.0.1:8000";
-
 export async function GET() {
-  const session = await auth();
-
-  if (process.env.NEXT_PUBLIC_USE_DUMMY_DATA === "true") {
-    return Response.json([
-      { provider: "openai", key_preview: "sk-...", is_active: true },
-      { provider: "anthropic", key_preview: "sk-ant-... ", is_active: false },
-    ]);
-  }
-
-  if (!session?.user || !session.user.accessToken) {
-    return new ChatbotError("unauthorized:chat").toResponse();
-  }
-
   try {
-    const res = await fetch(`${BACKEND_URL}/api/keys`, {
-      headers: {
-        Authorization: `Bearer ${session.user.accessToken}`,
-      },
-    });
-
-    if (!res.ok) {
-      throw new Error(`Failed to fetch keys: ${res.status}`);
-    }
-
-    const keys = await res.json();
+    const keys = await backendJSON("/api/keys");
     return Response.json(keys);
   } catch (err) {
+    if (err instanceof ChatbotError) return err.toResponse();
     console.error("Error fetching keys:", err);
     return new ChatbotError("offline:chat").toResponse();
   }
 }
 
 export async function POST(request: Request) {
-  const session = await auth();
-  if (!session?.user || !session.user.accessToken) {
-    return new ChatbotError("unauthorized:chat").toResponse();
-  }
-
   try {
     const body = await request.json();
-    const res = await fetch(`${BACKEND_URL}/api/keys`, {
+    const res = await backendFetch("/api/keys", {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${session.user.accessToken}`,
-        "Content-Type": "application/json",
-      },
       body: JSON.stringify(body),
+      rawOnError: true,
     });
 
-    if (!res.ok) {
-      const errorData = await res.json();
-      return Response.json(errorData, { status: res.status });
-    }
-
-    const key = await res.json();
-    return Response.json(key);
+    const data = await res.json();
+    return Response.json(data, { status: res.status });
   } catch (err) {
+    if (err instanceof ChatbotError) return err.toResponse();
     console.error("Error upserting key:", err);
     return new ChatbotError("offline:chat").toResponse();
   }
 }
 
 export async function PATCH(request: Request) {
-  const session = await auth();
-  if (!session?.user || !session.user.accessToken) {
-    return new ChatbotError("unauthorized:chat").toResponse();
-  }
-
   try {
     const { searchParams } = new URL(request.url);
-    const provider = searchParams.get("provider");
-    if (!provider) return Response.json({ error: "provider required" }, { status: 400 });
+    const id = searchParams.get("id");
+    if (!id)
+      return Response.json({ error: "id required" }, { status: 400 });
 
     const body = await request.json();
-    const res = await fetch(`${BACKEND_URL}/api/keys/${provider}`, {
+    const res = await backendFetch(`/api/keys/${id}`, {
       method: "PATCH",
-      headers: {
-        Authorization: `Bearer ${session.user.accessToken}`,
-        "Content-Type": "application/json",
-      },
       body: JSON.stringify(body),
+      rawOnError: true,
     });
 
-    if (!res.ok) {
-      return Response.json(await res.json(), { status: res.status });
-    }
-
-    return Response.json(await res.json());
+    return Response.json(await res.json(), { status: res.status });
   } catch (err) {
+    if (err instanceof ChatbotError) return err.toResponse();
     return new ChatbotError("offline:chat").toResponse();
   }
 }
 
 export async function DELETE(request: Request) {
-  const session = await auth();
-  if (!session?.user || !session.user.accessToken) {
-    return new ChatbotError("unauthorized:chat").toResponse();
-  }
-
   try {
     const { searchParams } = new URL(request.url);
-    const provider = searchParams.get("provider");
-    if (!provider) return Response.json({ error: "provider required" }, { status: 400 });
+    const id = searchParams.get("id");
+    const all = searchParams.get("all");
 
-    const res = await fetch(`${BACKEND_URL}/api/keys/${provider}`, {
+    // Single delete via path or param
+    if (id) {
+       const res = await backendFetch(`/api/keys/${id}`, {
+         method: "DELETE",
+         rawOnError: true,
+       });
+       if (!res.ok) return Response.json(await res.json(), { status: res.status });
+       return Response.json({ message: "deleted" });
+    }
+
+    // Bulk delete or Purge all
+    let body = undefined;
+    try {
+      body = await request.json();
+    } catch (e) {}
+
+    const queryString = all ? "?all=true" : "";
+    const res = await backendFetch(`/api/keys${queryString}`, {
       method: "DELETE",
-      headers: {
-        Authorization: `Bearer ${session.user.accessToken}`,
-      },
+      body: body ? JSON.stringify(body) : undefined,
+      rawOnError: true,
     });
 
     if (!res.ok) {
-      return Response.json(await res.json(), { status: res.status });
+      const errData = await res.json();
+      return Response.json(errData, { status: res.status });
     }
-
-    return Response.json({ message: "deleted" });
+    
+    return Response.json(await res.json());
   } catch (err) {
+    if (err instanceof ChatbotError) return err.toResponse();
+    console.error("Error deleting keys:", err);
     return new ChatbotError("offline:chat").toResponse();
   }
 }

@@ -48,6 +48,8 @@ const THEME_COLOR_SCRIPT = `\
   updateThemeColor();
 })();`;
 
+import { ConnectivityHandler } from "@/components/chat/connectivity-handler";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -77,7 +79,9 @@ export default function RootLayout({
           <SessionProvider
             basePath={`${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/auth`}
           >
-            <TooltipProvider>{children}</TooltipProvider>
+            <TooltipProvider>
+              <ConnectivityHandler>{children}</ConnectivityHandler>
+            </TooltipProvider>
           </SessionProvider>
         </ThemeProvider>
       </body>

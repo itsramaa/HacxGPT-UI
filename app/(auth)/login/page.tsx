@@ -12,7 +12,6 @@ import { type LoginActionState, login } from "../actions";
 
 export default function Page() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
   const [isSuccessful, setIsSuccessful] = useState(false);
 
   const [state, formAction] = useActionState<LoginActionState, FormData>(
@@ -33,23 +32,19 @@ export default function Page() {
       });
     } else if (state.status === "success") {
       setIsSuccessful(true);
-      updateSession();
-      router.refresh();
+      // Must await updateSession before navigating
+      updateSession().then(() => {
+        router.push("/");
+      });
     }
   }, [state.status]);
-
-  const handleSubmit = (formData: FormData) => {
-    setEmail(formData.get("email") as string);
-    formAction(formData);
-  };
-
   return (
     <>
       <h1 className="text-2xl font-semibold tracking-tight">Welcome back</h1>
       <p className="text-sm text-muted-foreground">
         Sign in to your account to continue
       </p>
-      <AuthForm action={handleSubmit} defaultEmail={email}>
+      <AuthForm action={formAction}>
         <SubmitButton isSuccessful={isSuccessful}>Sign in</SubmitButton>
         <p className="text-center text-[13px] text-muted-foreground">
           {"No account? "}

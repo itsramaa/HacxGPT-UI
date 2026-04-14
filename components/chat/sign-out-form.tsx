@@ -1,6 +1,6 @@
 import Form from "next/form";
-
 import { signOut } from "@/app/(auth)/auth";
+import { clearAccessToken } from "@/lib/auth-token";
 
 export const SignOutForm = () => {
   return (
@@ -8,9 +8,11 @@ export const SignOutForm = () => {
       action={async () => {
         "use server";
 
-        await signOut({
-          redirectTo: "/",
-        });
+        // 1. Clear the HTTP-only backend JWT cookie
+        await clearAccessToken();
+
+        // 2. Destroy the NextAuth session and redirect to login
+        await signOut({ redirectTo: "/login" });
       }}
       className="w-full"
     >

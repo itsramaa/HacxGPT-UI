@@ -1,39 +1,43 @@
 import NextAuth, { type DefaultSession } from "next-auth";
 import type { DefaultJWT } from "next-auth/jwt";
 import Credentials from "next-auth/providers/credentials";
+import { publicFetch } from "@/lib/api";
+import { setAccessToken } from "@/lib/auth-token";
 import { authConfig } from "./auth.config";
-
-export type UserType = "guest" | "regular";
 
 declare module "next-auth" {
   interface Session extends DefaultSession {
     user: {
       id: string;
-      type: UserType;
       accessToken?: string;
-      availableTokens?: number;
+      total_usage?: number;
     } & DefaultSession["user"];
   }
 
   interface User {
     id?: string;
     email?: string | null;
-    type: UserType;
     accessToken?: string;
-    availableTokens?: number;
+    total_usage?: number;
   }
 }
 
 declare module "next-auth/jwt" {
   interface JWT extends DefaultJWT {
     id: string;
-    type: UserType;
     accessToken?: string;
-    availableTokens?: number;
+    total_usage?: number;
+    /** Unix timestamp (ms) when the access token expires */
+    accessTokenExpiresAt?: number;
   }
 }
 
-const BACKEND_URL = process.env.BACKEND_API_URL || "http://127.0.0.1:8000";
+// ---------------------------------------------------------------------------
+// Token lifetime — should match the backend's JWT expiry.
+// Default: 8 hours (backend typically issues 30-min → 8-hour tokens).
+// ---------------------------------------------------------------------------
+const ACCESS_TOKEN_TTL_MS =
+  Number(process.env.ACCESS_TOKEN_TTL_SECONDS ?? 28_800) * 1000;
 
 export const {
   handlers: { GET, POST },
@@ -43,6 +47,7 @@ export const {
 } = NextAuth({
   ...authConfig,
   providers: [
+    // ─── Regular credentials login ────────────────────────────────────────
     Credentials({
       credentials: {
         email: { label: "Email/Username", type: "text" },
@@ -51,78 +56,73 @@ export const {
       async authorize(credentials) {
         const username = String(credentials.email ?? "");
         const password = String(credentials.password ?? "");
-        
-        try {
-          if (process.env.NEXT_PUBLIC_USE_DUMMY_DATA === "true") {
-             return {
-              id: "dummy-user-id",
-              email: username || "hacker@hacxgpt.io",
-              type: "regular",
-              accessToken: "dummy-token",
-              availableTokens: 999999
-            };
-          }
 
-          const res = await fetch(`${BACKEND_URL}/api/auth/token`, {
+        try {
+          // 1. Exchange credentials for a JWT
+          const res = await publicFetch("/api/auth/token", {
             method: "POST",
-            headers: {
-              "Content-Type": "application/x-www-form-urlencoded",
-            },
-            body: new URLSearchParams({ username, password }),
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: new URLSearchParams({ username, password }) as any,
           });
 
-          if (!res.ok) {
-            return null;
-          }
+          if (!res.ok) return null;
 
           const data = await res.json();
-          const token = data.access_token;
-          
-          const profileRes = await fetch(`${BACKEND_URL}/api/auth/me`, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-          
+          const token: string = data.access_token;
+
+          // 2. Persist the raw JWT in an HTTP-only cookie immediately
+          await setAccessToken(token);
+
+          // 3. Fetch the user profile to populate the session
+          const profileRes = await fetch(
+            `${process.env.BACKEND_API_URL || "http://127.0.0.1:8000"}/api/auth/me`,
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+
           if (!profileRes.ok) return null;
           const profile = await profileRes.json();
 
           return {
             id: profile.id,
             email: profile.username,
-            type: "regular",
             accessToken: token,
-            availableTokens: profile.available_tokens
+            total_usage: profile.total_usage,
           };
-        } catch(e) {
+        } catch (e) {
           console.error("Auth backend error:", e);
           return null;
         }
       },
     }),
-    Credentials({
-      id: "guest",
-      credentials: {},
-      async authorize() {
-        return { id: "guest", type: "guest" };
-      },
-    }),
   ],
+
   callbacks: {
+    // ── JWT callback: runs every time the token is created / refreshed ────
     jwt({ token, user }) {
       if (user) {
+        // First sign-in — seed from the User object returned by authorize()
         token.id = user.id as string;
-        token.type = user.type;
         token.accessToken = user.accessToken;
-        token.availableTokens = user.availableTokens;
+        token.total_usage = user.total_usage;
+        // Record when this token should be considered stale
+        token.accessTokenExpiresAt = user.accessToken
+          ? Date.now() + ACCESS_TOKEN_TTL_MS
+          : undefined;
       }
 
       return token;
     },
+
+    // ── Session callback: shapes the data exposed to useSession() ──────────
     session({ session, token }) {
-      if (session.user) {
-        session.user.id = token.id;
-        session.user.type = token.type;
-        session.user.accessToken = token.accessToken;
-        session.user.availableTokens = token.availableTokens;
+      if (session.user && token) {
+        session.user.id = (token.id as string) || (token.sub as string);
+        // Expose the access token to server-side session callers;
+        // it is NOT sent to the browser (the cookie handles that).
+        session.user.accessToken = token.accessToken as string | undefined;
+        session.user.total_usage = token.total_usage as
+          | number
+          | undefined;
       }
 
       return session;

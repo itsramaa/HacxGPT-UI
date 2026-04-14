@@ -24,7 +24,7 @@ import {
   SidebarMenu,
   useSidebar,
 } from "@/components/ui/sidebar";
-import type { Chat } from "@/lib/db/schema";
+import type { Chat } from "@/lib/types";
 import { fetcher } from "@/lib/utils";
 import { LoaderIcon } from "./icons";
 import { ChatItem } from "./sidebar-history-item";
@@ -89,13 +89,15 @@ export function getChatHistoryPaginationKey(
     return `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/history?limit=${PAGE_SIZE}`;
   }
 
-  const firstChatFromPage = previousPageData.chats.at(-1);
+  // Use the oldest chat in the previous page as the cursor.
+  // "starting_after" tells the API to return chats older than this ID.
+  const oldestChatFromPage = previousPageData.chats.at(-1);
 
-  if (!firstChatFromPage) {
+  if (!oldestChatFromPage) {
     return null;
   }
 
-  return `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/history?ending_before=${firstChatFromPage.id}&limit=${PAGE_SIZE}`;
+  return `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/history?starting_after=${oldestChatFromPage.id}&limit=${PAGE_SIZE}`;
 }
 
 export function SidebarHistory({ user }: { user: User | undefined }) {
@@ -127,8 +129,10 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
     ? paginatedChatHistories.every((page) => page.chats.length === 0)
     : false;
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     const chatToDelete = deleteId;
+    if (!chatToDelete) return;
+    
     const isCurrentChat = pathname === `/chat/${chatToDelete}`;
 
     setShowDeleteDialog(false);
@@ -137,21 +141,38 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
       router.replace("/");
     }
 
-    mutate((chatHistories) => {
-      if (chatHistories) {
-        return chatHistories.map((chatHistory) => ({
-          ...chatHistory,
-          chats: chatHistory.chats.filter((chat) => chat.id !== chatToDelete),
-        }));
-      }
-    });
-
-    fetch(
-      `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/chat?id=${chatToDelete}`,
-      { method: "DELETE" }
+    // Optimistic update: remove from local cache immediately and don't revalidate yet
+    await mutate(
+      (chatHistories) => {
+        if (chatHistories) {
+          return chatHistories.map((chatHistory) => ({
+            ...chatHistory,
+            chats: chatHistory.chats.filter((chat) => chat.id !== chatToDelete),
+          }));
+        }
+        return chatHistories;
+      },
+      { revalidate: false }
     );
 
-    toast.success("Chat deleted");
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/chat?id=${chatToDelete}`,
+        { method: "DELETE" }
+      );
+      
+      if (!response.ok) {
+        throw new Error("Failed to delete chat");
+      }
+      
+      toast.success("Chat deleted");
+      // Revalidate to sync with server
+      mutate();
+    } catch (error) {
+      toast.error("Failed to delete chat. Please try again.");
+      // Rollback on error
+      mutate();
+    }
   };
 
   if (!user) {

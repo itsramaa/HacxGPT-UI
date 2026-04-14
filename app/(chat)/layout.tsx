@@ -18,15 +18,47 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       />
       <DataStreamProvider>
         <Suspense fallback={<div className="flex h-dvh bg-sidebar" />}>
-          <SidebarShell>{children}</SidebarShell>
+          <ChatContainer>{children}</ChatContainer>
         </Suspense>
       </DataStreamProvider>
     </>
   );
 }
 
-async function SidebarShell({ children }: { children: React.ReactNode }) {
-  const [session, cookieStore] = await Promise.all([auth(), cookies()]);
+async function ChatContainer({ children }: { children: React.ReactNode }) {
+  const session = await auth();
+
+  // NOTE: Do NOT hard redirect("/login") here — that creates a loop with middleware.
+  // Middleware already guards unauthenticated routes. The only case we reach here
+  // without a session is if the backend is temporarily unavailable (auth() fails
+  // to validate the token). In that case, show a fallback instead of looping.
+  if (!session?.user) {
+    return (
+      <div className="flex h-dvh items-center justify-center bg-sidebar">
+        <div className="flex flex-col items-center gap-3 text-center">
+          <p className="text-sm text-muted-foreground">
+            Session could not be loaded. Please{" "}
+            <a className="underline" href="/login">
+              sign in again
+            </a>
+            .
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return <SidebarShell session={session}>{children}</SidebarShell>;
+}
+
+async function SidebarShell({
+  children,
+  session,
+}: {
+  children: React.ReactNode;
+  session: any;
+}) {
+  const cookieStore = await cookies();
   const isCollapsed = cookieStore.get("sidebar_state")?.value !== "true";
 
   return (
@@ -43,10 +75,10 @@ async function SidebarShell({ children }: { children: React.ReactNode }) {
                 "!bg-card !text-foreground !border-border/50 !shadow-[var(--shadow-float)]",
             }}
           />
-          <Suspense key="shell" fallback={<div className="flex h-dvh" />}>
+          <Suspense fallback={<div className="flex h-dvh" />} key="shell">
             <ChatShell />
           </Suspense>
-          <div key="page-children" className="contents">
+          <div className="contents" key="page-children">
             {children}
           </div>
         </SidebarInset>

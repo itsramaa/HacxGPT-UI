@@ -50,18 +50,32 @@ export function AppSidebar({ user }: { user: User | undefined }) {
   const { mutate } = useSWRConfig();
   const [showDeleteAllDialog, setShowDeleteAllDialog] = useState(false);
 
-  const handleDeleteAll = () => {
+  const handleDeleteAll = async () => {
     setShowDeleteAllDialog(false);
     router.replace("/");
-    mutate(unstable_serialize(getChatHistoryPaginationKey), [], {
+
+    // Optimistic update: clear history cache
+    await mutate(unstable_serialize(getChatHistoryPaginationKey), [], {
       revalidate: false,
     });
 
-    fetch(`${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/history`, {
-      method: "DELETE",
-    });
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/history`, {
+        method: "DELETE",
+      });
 
-    toast.success("All chats deleted");
+      if (!response.ok) {
+        throw new Error("Failed to delete all chats");
+      }
+
+      toast.success("All chats deleted");
+      // Revalidate to sync with server
+      mutate(unstable_serialize(getChatHistoryPaginationKey));
+    } catch (error) {
+      toast.error("Failed to delete all chats. Please try again.");
+      // Rollback/Sync
+      mutate(unstable_serialize(getChatHistoryPaginationKey));
+    }
   };
 
   return (

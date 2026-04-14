@@ -1,21 +1,20 @@
 "use client";
 import type { UseChatHelpers } from "@ai-sdk/react";
-import type { Vote } from "@/lib/db/schema";
 import type { ChatMessage } from "@/lib/types";
 import { cn, sanitizeText } from "@/lib/utils";
 import { MessageContent, MessageResponse } from "../ai-elements/message";
 import { Shimmer } from "../ai-elements/shimmer";
 import { useDataStream } from "./data-stream-provider";
+import { useActiveChat } from "@/hooks/use-active-chat";
 import { SparklesIcon } from "./icons";
 import { MessageActions } from "./message-actions";
 import { MessageReasoning } from "./message-reasoning";
 import { PreviewAttachment } from "./preview-attachment";
+import { VersionSwitcher } from "./version-switcher";
 
 const PurePreviewMessage = ({
-  addToolApprovalResponse,
   chatId,
   message,
-  vote,
   isLoading,
   setMessages: _setMessages,
   regenerate: _regenerate,
@@ -26,7 +25,6 @@ const PurePreviewMessage = ({
   addToolApprovalResponse: UseChatHelpers<ChatMessage>["addToolApprovalResponse"];
   chatId: string;
   message: ChatMessage;
-  vote: Vote | undefined;
   isLoading: boolean;
   setMessages: UseChatHelpers<ChatMessage>["setMessages"];
   regenerate: UseChatHelpers<ChatMessage>["regenerate"];
@@ -106,9 +104,10 @@ const PurePreviewMessage = ({
     if (type === "text") {
       return (
         <MessageContent
-          className={cn("text-[13px] leading-[1.65]", {
-            "w-fit max-w-[min(80%,56ch)] overflow-hidden break-words rounded-2xl rounded-br-lg border border-border/30 bg-gradient-to-br from-secondary to-muted px-3.5 py-2 shadow-[var(--shadow-card)]":
+          className={cn({
+            "text-[13px] leading-[1.65] w-fit max-w-[min(80%,56ch)] overflow-hidden break-words rounded-2xl rounded-br-lg border border-border/30 bg-gradient-to-br from-secondary to-muted px-3.5 py-2 shadow-[var(--shadow-card)]":
               message.role === "user",
+            "markdown-content": message.role === "assistant",
           })}
           data-testid="message-content"
           key={key}
@@ -128,14 +127,16 @@ const PurePreviewMessage = ({
       key={`action-${message.id}`}
       message={message}
       onEdit={onEdit ? () => onEdit(message) : undefined}
-      vote={vote}
     />
   );
+
+  const { activeTool } = useActiveChat();
+  const thinkingLabel = activeTool === "search_web" ? "Searching the web..." : "Thinking...";
 
   const content = isThinking ? (
     <div className="flex h-[calc(13px*1.65)] items-center text-[13px] leading-[1.65]">
       <Shimmer className="font-medium" duration={1}>
-        Thinking...
+        {thinkingLabel}
       </Shimmer>
     </div>
   ) : (
@@ -168,7 +169,10 @@ const PurePreviewMessage = ({
           </div>
         )}
         {isAssistant ? (
-          <div className="flex min-w-0 flex-1 flex-col gap-2">{content}</div>
+          <div className="flex min-w-0 flex-1 flex-col gap-2">
+            {content}
+            <VersionControl message={message} />
+          </div>
         ) : (
           content
         )}
@@ -177,9 +181,52 @@ const PurePreviewMessage = ({
   );
 };
 
+function VersionControl({ message }: { message: ChatMessage }) {
+  const { allMessages, versions, switchVersion } = useActiveChat();
+  const parentId = message.metadata?.parentId;
+  if (!parentId) return null;
+
+  const siblings = allMessages
+    .filter((m) => m.role === "assistant" && m.metadata?.parentId === parentId)
+    .sort((a, b) => (a.metadata?.version ?? 0) - (b.metadata?.version ?? 0));
+
+  if (siblings.length <= 1) return null;
+
+  const currentVersion = message.metadata?.version ?? 1;
+  const totalVersions = siblings.length;
+
+  const handlePrev = () => {
+    const prevIdx = siblings.findIndex((s) => s.metadata?.version === currentVersion) - 1;
+    if (prevIdx >= 0) {
+      switchVersion(parentId, siblings[prevIdx].metadata?.version ?? 1);
+    }
+  };
+
+  const handleNext = () => {
+    const nextIdx = siblings.findIndex((s) => s.metadata?.version === currentVersion) + 1;
+    if (nextIdx < siblings.length) {
+      switchVersion(parentId, siblings[nextIdx].metadata?.version ?? 1);
+    }
+  };
+
+  return (
+    <VersionSwitcher
+      current={currentVersion}
+      total={totalVersions}
+      onPrev={handlePrev}
+      onNext={handleNext}
+      className="mt-1"
+    />
+  );
+}
+
 export const PreviewMessage = PurePreviewMessage;
 
 export const ThinkingMessage = () => {
+  const { activeTool } = useActiveChat();
+  
+  const label = activeTool === "search_web" ? "Searching the web..." : "Thinking...";
+
   return (
     <div
       className="group/message w-full"
@@ -195,7 +242,7 @@ export const ThinkingMessage = () => {
 
         <div className="flex h-[calc(13px*1.65)] items-center text-[13px] leading-[1.65]">
           <Shimmer className="font-medium" duration={1}>
-            Thinking...
+            {label}
           </Shimmer>
         </div>
       </div>

@@ -10,15 +10,31 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export const fetcher = async (url: string) => {
-  const response = await fetch(url);
-
-  if (!response.ok) {
-    const { code, cause } = await response.json();
-    throw new ChatbotError(code as ErrorCode, cause);
+export function dispatchOfflineEvent() {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("hacxgpt:offline"));
   }
+}
 
-  return response.json();
+export const fetcher = async (url: string) => {
+  try {
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      const data = await response.json();
+      if (data.error === "offline") {
+        dispatchOfflineEvent();
+      }
+      throw new ChatbotError(data.code as ErrorCode, data.cause);
+    }
+
+    return response.json();
+  } catch (err) {
+    if (err instanceof TypeError && err.message.includes("fetch")) {
+      dispatchOfflineEvent();
+    }
+    throw err;
+  }
 };
 
 export async function fetchWithErrorHandlers(
@@ -29,12 +45,20 @@ export async function fetchWithErrorHandlers(
     const response = await fetch(input, init);
 
     if (!response.ok) {
-      const { code, cause } = await response.json();
-      throw new ChatbotError(code as ErrorCode, cause);
+      const data = await response.json();
+      if (data.error === "offline") {
+        dispatchOfflineEvent();
+      }
+      throw new ChatbotError(data.code as ErrorCode, data.cause);
     }
 
     return response;
   } catch (error: unknown) {
+    // Check if it's a network error (server process down)
+    if (error instanceof TypeError && error.message.includes("fetch")) {
+      dispatchOfflineEvent();
+    }
+    
     if (typeof navigator !== 'undefined' && !navigator.onLine) {
       throw new ChatbotError('offline:chat');
     }

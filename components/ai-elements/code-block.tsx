@@ -138,20 +138,33 @@ const getTokensCacheKey = (code: string, language: BundledLanguage) => {
   return `${language}:${code.length}:${start}:${end}`;
 };
 
+// Map specific languages to bundled ones if they are missing or similar
+const LANGUAGE_MAP: Record<string, BundledLanguage> = {
+  proguard: "java",
+};
+
 const getHighlighter = (
   language: BundledLanguage
 ): Promise<HighlighterGeneric<BundledLanguage, BundledTheme>> => {
-  const cached = highlighterCache.get(language);
+  const targetLang = LANGUAGE_MAP[language as string] || language;
+  const cached = highlighterCache.get(targetLang);
   if (cached) {
     return cached;
   }
 
   const highlighterPromise = createHighlighter({
-    langs: [language],
+    langs: [targetLang],
     themes: ["github-light", "github-dark"],
+  }).catch((err) => {
+    // If language load fails, fallback to a minimal highlighter with plain text
+    console.warn(`Shiki failed to load ${targetLang}, falling back to text:`, err);
+    return createHighlighter({
+      langs: ["text"],
+      themes: ["github-light", "github-dark"],
+    });
   });
 
-  highlighterCache.set(language, highlighterPromise);
+  highlighterCache.set(targetLang, highlighterPromise);
   return highlighterPromise;
 };
 
@@ -198,8 +211,9 @@ export const highlightCode = (
   getHighlighter(language)
     // oxlint-disable-next-line eslint-plugin-promise(prefer-await-to-then)
     .then((highlighter) => {
+      const targetLang = LANGUAGE_MAP[language as string] || language;
       const availableLangs = highlighter.getLoadedLanguages();
-      const langToUse = availableLangs.includes(language) ? language : "text";
+      const langToUse = availableLangs.includes(targetLang) ? targetLang : "text";
 
       const result = highlighter.codeToTokens(code, {
         lang: langToUse,

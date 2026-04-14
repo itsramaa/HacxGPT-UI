@@ -498,3 +498,52 @@ textarea:focus-visible {
 [data-testid="artifact"] {
   isolation: isolate;
 }
+
+.markdown-content {
+  @apply text-[14px] leading-[1.6] text-foreground/90;
+}
+
+.markdown-content p {
+  @apply mb-4 last:mb-0;
+}
+
+.markdown-content strong {
+  @apply font-bold text-primary;
+}
+
+.markdown-content ul, .markdown-content ol {
+  @apply mb-4 pl-5 space-y-1.5 list-outside;
+}
+
+.markdown-content ul {
+  @apply list-disc marker:text-primary/50;
+}
+
+.markdown-content ol {
+  @apply list-decimal marker:text-primary/50 marker:font-mono marker:text-[10px];
+}
+
+.markdown-content li {
+  @apply pl-1;
+}
+
+.markdown-content code:not(pre code) {
+  @apply rounded border border-border/50 bg-secondary/50 px-1 py-0.5 font-mono text-[12px] text-primary;
+}
+
+.markdown-content pre {
+  @apply my-4 overflow-hidden rounded-xl border border-border/50 bg-secondary/30;
+}
+
+.markdown-content blockquote {
+  @apply my-4 border-l-2 border-primary/30 pl-4 italic text-muted-foreground bg-primary/5 py-2 rounded-r-lg;
+}
+
+.markdown-content h1, .markdown-content h2, .markdown-content h3 {
+  @apply mt-6 mb-3 font-bold text-foreground border-b border-border/50 pb-1 w-fit;
+}
+
+.markdown-content h1 { @apply text-lg; }
+.markdown-content h2 { @apply text-base; }
+.markdown-content h3 { @apply text-sm uppercase tracking-wider; }
+

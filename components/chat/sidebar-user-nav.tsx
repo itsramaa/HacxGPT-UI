@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import type { User } from "next-auth";
 import { signOut, useSession } from "next-auth/react";
 import { useTheme } from "next-themes";
+import { useEffect } from "react";
+import useSWR from "swr";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,10 +19,9 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { guestRegex } from "@/lib/constants";
+import { useActiveChat } from "@/hooks/use-active-chat";
 import { LoaderIcon } from "./icons";
 import { toast } from "./toast";
-import { useActiveChat } from "@/hooks/use-active-chat";
 
 function emailToHue(email: string): number {
   let hash = 0;
@@ -32,11 +33,29 @@ function emailToHue(email: string): number {
 
 export function SidebarUserNav({ user }: { user: User }) {
   const router = useRouter();
-  const { data, status } = useSession();
+  const { data: session, status } = useSession();
   const { setTheme, resolvedTheme } = useTheme();
   const { setShowSettings } = useActiveChat();
 
-  const isGuest = guestRegex.test(data?.user?.email ?? "");
+  // Use SWR for real-time profile updates (like total_usage)
+  const { data: profile, mutate } = useSWR(
+    status === "authenticated" ? "/api/auth/me" : null,
+    async (url) => {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("Failed to fetch profile");
+      return res.json();
+    },
+    { revalidateOnFocus: false }
+  );
+
+  // Listen for global usage-updated events
+  useEffect(() => {
+    const handleUpdate = () => mutate();
+    window.addEventListener("hacxgpt:usage-updated", handleUpdate);
+    return () => window.removeEventListener("hacxgpt:usage-updated", handleUpdate);
+  }, [mutate]);
+
+  const displayUsage = profile?.total_usage ?? session?.user?.total_usage;
 
   return (
     <SidebarMenu>
@@ -67,7 +86,7 @@ export function SidebarUserNav({ user }: { user: User }) {
                   }}
                 />
                 <span className="truncate text-[13px]" data-testid="user-email">
-                  {isGuest ? "Guest" : user?.email}
+                  {user?.email}
                 </span>
                 <ChevronUp className="ml-auto size-3.5 text-sidebar-foreground/50" />
               </SidebarMenuButton>
@@ -83,28 +102,28 @@ export function SidebarUserNav({ user }: { user: User }) {
               onSelect={() => router.push("/profile")}
             >
               <div className="flex items-center gap-2">
-                <div className="size-4 rounded-full bg-primary/20 flex items-center justify-center text-[10px] text-primary">P</div>
+                <div className="size-4 rounded-full bg-primary/20 flex items-center justify-center text-[10px] text-primary">
+                  P
+                </div>
                 Profile
               </div>
             </DropdownMenuItem>
-            
-            {data?.user?.availableTokens !== undefined && (
+
+            {displayUsage !== undefined && (
               <>
                 <div className="px-2 py-1.5 text-[11px] text-muted-foreground font-medium uppercase tracking-wider pt-2">
-                  Quota: {data.user.availableTokens.toLocaleString()} tokens
+                  Total Usage: {displayUsage.toLocaleString()} tokens
                 </div>
                 <DropdownMenuSeparator />
               </>
             )}
             <DropdownMenuSeparator />
-            {!isGuest && (
-              <DropdownMenuItem
-                className="cursor-pointer text-[13px]"
-                onSelect={() => router.push("/settings")}
-              >
-                Settings
-              </DropdownMenuItem>
-            )}
+            <DropdownMenuItem
+              className="cursor-pointer text-[13px]"
+              onSelect={() => router.push("/settings")}
+            >
+              Settings
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild data-testid="user-nav-item-auth">
               <button
@@ -120,17 +139,13 @@ export function SidebarUserNav({ user }: { user: User }) {
                     return;
                   }
 
-                  if (isGuest) {
-                    router.push("/login");
-                  } else {
-                    signOut({
-                      redirectTo: "/",
-                    });
-                  }
+                  signOut({
+                    redirectTo: "/",
+                  });
                 }}
                 type="button"
               >
-                {isGuest ? "Login to your account" : "Sign out"}
+                Sign out
               </button>
             </DropdownMenuItem>
           </DropdownMenuContent>

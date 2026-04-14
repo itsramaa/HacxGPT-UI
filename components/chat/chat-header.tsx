@@ -1,13 +1,13 @@
 "use client";
 
 import { MoonIcon, PanelLeftIcon, SearchIcon, SunIcon } from "lucide-react";
-import Link from "next/link";
+import { useTheme } from "next-themes";
 import { memo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useSidebar } from "@/components/ui/sidebar";
-import { useTheme } from "next-themes";
 import { VisibilitySelector, type VisibilityType } from "./visibility-selector";
+import { useActiveChat } from "@/hooks/use-active-chat";
 
 function PureChatHeader({
   chatId,
@@ -20,6 +20,7 @@ function PureChatHeader({
 }) {
   const { state, toggleSidebar, isMobile } = useSidebar();
   const { theme, setTheme, resolvedTheme } = useTheme();
+  const { searchQuery, setSearchQuery } = useActiveChat();
 
   if (state === "collapsed" && !isMobile) {
     return null;
@@ -37,12 +38,13 @@ function PureChatHeader({
           <PanelLeftIcon className="size-4" />
         </Button>
 
-        {!isReadonly && (
+        {/* Visibility selector hidden until sharing is implemented */}
+        {/* {!isReadonly && (
           <VisibilitySelector
             chatId={chatId}
             selectedVisibilityType={selectedVisibilityType}
           />
-        )}
+        )} */}
       </div>
 
       <div className="relative flex-1 max-w-sm hidden sm:block">
@@ -51,15 +53,17 @@ function PureChatHeader({
           className="h-9 w-full rounded-full bg-background/50 pl-9 text-xs focus-visible:ring-primary/20"
           placeholder="Search within this chat..."
           type="search"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
         />
       </div>
 
       <div className="flex items-center gap-2">
         <Button
+          className="rounded-lg text-muted-foreground hover:text-foreground"
           onClick={() => setTheme(resolvedTheme === "light" ? "dark" : "light")}
           size="icon-sm"
           variant="ghost"
-          className="rounded-lg text-muted-foreground hover:text-foreground"
         >
           {resolvedTheme === "light" ? (
             <MoonIcon className="size-4" />

@@ -6,6 +6,7 @@ import { createContext, useContext, useMemo, useState } from "react";
 
 export type CustomUIDataTypes = {
   "chat-title": string;
+  "tool-call": string;
 };
 
 type DataStreamContextValue = {

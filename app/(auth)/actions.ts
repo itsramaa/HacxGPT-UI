@@ -1,12 +1,18 @@
 "use server";
 
 import { z } from "zod";
+import { publicFetch } from "@/lib/api";
 import { signIn } from "./auth";
 
-const BACKEND_URL = process.env.BACKEND_API_URL || "http://127.0.0.1:8000";
+const loginSchema = z.object({
+  identifier: z.string().min(3),
+  password: z.string().min(6),
+});
 
-const authFormSchema = z.object({
-  email: z.string().min(3),
+const registerSchema = z.object({
+  username: z.string().min(3).max(50),
+  email: z.string().email(),
+  fullName: z.string().max(100).optional(),
   password: z.string().min(6),
 });
 
@@ -19,17 +25,20 @@ export const login = async (
   formData: FormData
 ): Promise<LoginActionState> => {
   try {
-    const validatedData = authFormSchema.parse({
-      email: formData.get("email"),
+    const validatedData = loginSchema.parse({
+      identifier: formData.get("identifier"),
       password: formData.get("password"),
     });
 
     await signIn("credentials", {
-      email: validatedData.email,
+      email: validatedData.identifier,
       password: validatedData.password,
       redirect: false,
     });
 
+    // The cookie is already set inside auth.ts → authorize() → setAccessToken().
+    // signIn() runs authorize() server-side, so the cookie lands on the response
+    // before we return "success" to the client.
     return { status: "success" };
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -55,16 +64,22 @@ export const register = async (
   formData: FormData
 ): Promise<RegisterActionState> => {
   try {
-    const validatedData = authFormSchema.parse({
+    const validatedData = registerSchema.parse({
+      username: formData.get("username"),
       email: formData.get("email"),
+      fullName: formData.get("fullName") || undefined,
       password: formData.get("password"),
     });
 
-    const res = await fetch(`${BACKEND_URL}/api/auth/register`, {
+    console.log("validate data:" + validatedData.email)
+
+    // 1. Create account on the backend
+    const res = await publicFetch("/api/auth/register", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        username: validatedData.email,
+        username: validatedData.username,
+        email: validatedData.email,
+        full_name: validatedData.fullName,
         password: validatedData.password,
       }),
     });
@@ -76,8 +91,9 @@ export const register = async (
       return { status: "failed" };
     }
 
+    // 2. Log in immediately and set the HTTP-only cookie
     await signIn("credentials", {
-      email: validatedData.email,
+      email: validatedData.username,
       password: validatedData.password,
       redirect: false,
     });

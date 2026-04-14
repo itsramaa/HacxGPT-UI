@@ -1,51 +1,57 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { getToken } from "next-auth/jwt";
-import { guestRegex, isDevelopmentEnvironment } from "./lib/constants";
+import NextAuth from "next-auth";
+import { authConfig } from "./app/(auth)/auth.config";
+import { TOKEN_COOKIE_NAME } from "./lib/auth-token";
 
-export async function proxy(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+const { auth } = NextAuth(authConfig);
 
-  if (pathname.startsWith("/ping")) {
-    return new Response("pong", { status: 200 });
-  }
+const base = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
-  if (pathname.startsWith("/api/auth")) {
+export default auth((req: NextRequest & { auth: any }) => {
+  const { pathname } = req.nextUrl;
+
+  const isAuthPage =
+    pathname.startsWith(`${base}/login`) ||
+    pathname.startsWith(`${base}/register`);
+
+  // Primary auth check: NextAuth session (JWT cookie set by next-auth)
+  const hasNextAuthSession = !!req.auth;
+
+  // Secondary check: our backend JWT cookie also present?
+  // This lets us detect cases where NextAuth session is valid but the
+  // backend cookie was somehow cleared (e.g. manual deletion, other tab logout).
+  const hasBackendToken = !!req.cookies.get(TOKEN_COOKIE_NAME)?.value;
+
+  const isLoggedIn = hasNextAuthSession;
+
+  if (isAuthPage) {
+    if (isLoggedIn) {
+      // Already authenticated — send them to the main app
+      return NextResponse.redirect(new URL(`${base}/`, req.url));
+    }
     return NextResponse.next();
   }
 
-  const token = await getToken({
-    req: request,
-    secret: process.env.AUTH_SECRET,
-    secureCookie: !isDevelopmentEnvironment,
-  });
-
-  const base = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
-
-  if (!token) {
-    const redirectUrl = encodeURIComponent(new URL(request.url).pathname);
-
-    return NextResponse.redirect(
-      new URL(`${base}/api/auth/guest?redirectUrl=${redirectUrl}`, request.url)
-    );
+  if (!isLoggedIn) {
+    // Stash the current URL so we can redirect back after login
+    const loginUrl = new URL(`${base}/login`, req.url);
+    loginUrl.searchParams.set("callbackUrl", pathname);
+    return NextResponse.redirect(loginUrl);
   }
 
-  const isGuest = guestRegex.test(token?.email ?? "");
-
-  if (token && !isGuest && ["/login", "/register"].includes(pathname)) {
-    return NextResponse.redirect(new URL(`${base}/`, request.url));
+  // If the user has a NextAuth session but the backend token is missing,
+  // attach a warning header so server components can inform the user.
+  if (!hasBackendToken) {
+    const response = NextResponse.next();
+    response.headers.set("X-Backend-Token-Missing", "1");
+    return response;
   }
 
   return NextResponse.next();
-}
+});
 
 export const config = {
   matcher: [
-    "/",
-    "/chat/:id",
-    "/api/:path*",
-    "/login",
-    "/register",
-
-    "/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt).*)",
+    "/((?!api|_next/static|_next/image|.*\\.png$|.*\\.ico$|.*\\.svg$).*)",
   ],
 };

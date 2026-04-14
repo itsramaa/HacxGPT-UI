@@ -1,14 +1,8 @@
-import type { UserType } from "@/app/(auth)/auth";
+/**
+ * lib/ai/entitlements.ts
+ *
+ * Current system configuration for user limits.
+ * All users now follow the "regular" limits as guest access is disabled.
+ */
 
-type Entitlements = {
-  maxMessagesPerHour: number;
-};
-
-export const entitlementsByUserType: Record<UserType, Entitlements> = {
-  guest: {
-    maxMessagesPerHour: 10,
-  },
-  regular: {
-    maxMessagesPerHour: 10,
-  },
-};
+export const MAX_MESSAGES_PER_HOUR = 10;
