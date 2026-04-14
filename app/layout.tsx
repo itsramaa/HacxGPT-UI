@@ -9,7 +9,7 @@ import { SessionProvider } from "next-auth/react";
 export const metadata: Metadata = {
   metadataBase: new URL("https://hacxgpt.kawasan-digital.com"),
   title: "HacxGPT — Elite AI Workspace",
-  description: "Advanced multi-provider AI gateway with native tool execution and real-time intelligence gathering by Kawasan Digital.",
+  description: "Advanced multi-provider AI gateway with native tool execution and real-time intelligence gathering by Holycan.",
 };
 
 export const viewport = {

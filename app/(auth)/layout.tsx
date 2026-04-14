@@ -31,7 +31,7 @@ export default function AuthLayout({
         <div className="flex items-center gap-1.5 pt-8 text-[13px] text-muted-foreground/50">
           Powered by
           <SparklesIcon size={14} />
-          <span className="font-medium text-muted-foreground">Kawasan Digital</span>
+          <span className="font-medium text-muted-foreground">Holycan</span>
         </div>
         <div className="flex-1 pt-4 relative">
           <div className="absolute inset-0 bg-background/50 rounded-tl-[12px] border-t border-l border-border/40 p-10 overflow-hidden shadow-sm">
