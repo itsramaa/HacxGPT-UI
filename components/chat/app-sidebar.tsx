@@ -1,13 +1,14 @@
 "use client";
 
 import {
+  ArrowLeftIcon,
   MessageSquareIcon,
   PanelLeftIcon,
   PenSquareIcon,
   TrashIcon,
 } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import type { User } from "next-auth";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -18,6 +19,7 @@ import {
   SidebarHistory,
 } from "@/components/chat/sidebar-history";
 import { SidebarUserNav } from "@/components/chat/sidebar-user-nav";
+import { SidebarAdmin } from "@/components/chat/sidebar-admin";
 import {
   Sidebar,
   SidebarContent,
@@ -46,6 +48,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 
 export function AppSidebar({ user }: { user: User | undefined }) {
   const router = useRouter();
+  const pathname = usePathname();
   const { setOpenMobile, toggleSidebar } = useSidebar();
   const { mutate } = useSWRConfig();
   const [showDeleteAllDialog, setShowDeleteAllDialog] = useState(false);
@@ -77,6 +80,8 @@ export function AppSidebar({ user }: { user: User | undefined }) {
       mutate(unstable_serialize(getChatHistoryPaginationKey));
     }
   };
+
+  const isAdminPage = pathname === "/admin";
 
   return (
     <>
@@ -118,35 +123,54 @@ export function AppSidebar({ user }: { user: User | undefined }) {
           <SidebarGroup className="pt-1">
             <SidebarGroupContent>
               <SidebarMenu>
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    className="h-8 rounded-lg border border-sidebar-border text-[13px] text-sidebar-foreground/70 transition-colors duration-150 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
-                    onClick={() => {
-                      setOpenMobile(false);
-                      router.push("/");
-                    }}
-                    tooltip="New Chat"
-                  >
-                    <PenSquareIcon className="size-4" />
-                    <span className="font-medium">New chat</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                {user && (
+                {isAdminPage ? (
                   <SidebarMenuItem>
                     <SidebarMenuButton
-                      className="rounded-lg text-sidebar-foreground/40 transition-colors duration-150 hover:bg-destructive/10 hover:text-destructive"
-                      onClick={() => setShowDeleteAllDialog(true)}
-                      tooltip="Delete All Chats"
+                      className="h-8 rounded-lg border border-primary/30 text-[13px] text-primary transition-colors duration-150 hover:bg-primary/10"
+                      onClick={() => {
+                        setOpenMobile(false);
+                        router.push("/");
+                      }}
+                      tooltip="Back to Chat"
                     >
-                      <TrashIcon className="size-4" />
-                      <span className="text-[13px]">Delete all</span>
+                      <ArrowLeftIcon className="size-4" />
+                      <span className="font-medium">Back to Chat</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
+                ) : (
+                  <>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        className="h-8 rounded-lg border border-sidebar-border text-[13px] text-sidebar-foreground/70 transition-colors duration-150 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+                        onClick={() => {
+                          setOpenMobile(false);
+                          router.push("/");
+                        }}
+                        tooltip="New Chat"
+                      >
+                        <PenSquareIcon className="size-4" />
+                        <span className="font-medium">New chat</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    {user && (
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          className="rounded-lg text-sidebar-foreground/40 transition-colors duration-150 hover:bg-destructive/10 hover:text-destructive"
+                          onClick={() => setShowDeleteAllDialog(true)}
+                          tooltip="Delete All Chats"
+                        >
+                          <TrashIcon className="size-4" />
+                          <span className="text-[13px]">Delete all</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    )}
+                  </>
                 )}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
-          <SidebarHistory user={user} />
+          <SidebarAdmin />
+          {!isAdminPage && <SidebarHistory user={user} />}
         </SidebarContent>
         <SidebarFooter className="border-t border-sidebar-border pt-2 pb-3">
           {user && <SidebarUserNav user={user} />}

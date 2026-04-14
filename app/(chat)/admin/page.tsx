@@ -2,7 +2,7 @@
 
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, cloneElement } from "react";
 import useSWR from "swr";
 import { 
   UsersIcon, 
@@ -235,7 +235,7 @@ function StatCard({ icon, label, value, color }: { icon: any, label: string, val
     return (
         <div className={`p-4 rounded-xl border flex items-center gap-4 ${colorMap[color] || colorMap.primary}`}>
             <div className="p-2 rounded-lg bg-background/50">
-                {cloneIcon(icon, "size-5")}
+                {cloneElement(icon, { className: "size-5" })}
             </div>
             <div className="flex flex-col">
                 <span className="text-[11px] font-bold uppercase tracking-widest opacity-70">{label}</span>
@@ -245,7 +245,3 @@ function StatCard({ icon, label, value, color }: { icon: any, label: string, val
     )
 }
 
-function cloneIcon(icon: any, className: string) {
-    const { cloneElement } = require("react");
-    return cloneElement(icon, { className });
-}
