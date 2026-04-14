@@ -147,8 +147,24 @@ export default function ProvidersAdminPage() {
 
                             <div className="flex flex-wrap gap-2">
                                 {p.models?.map((m: any) => (
-                                    <div key={m.id} title={`Backend ID: ${m.name}`} className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-muted/30 border border-border/20 text-[11px] font-medium group/model transition-all hover:border-primary/30">
-                                        <CpuIcon className="size-3 text-muted-foreground" />
+                                    <div 
+                                        key={m.id} 
+                                        title={`Backend ID: ${m.name}`} 
+                                        className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-[11px] font-medium transition-all cursor-pointer ${m.is_public ? 'bg-primary/20 border-primary/40 text-primary' : 'bg-muted/30 border-border/20 text-muted-foreground'}`}
+                                        onClick={async () => {
+                                            try {
+                                                const res = await fetch(`/api/admin/models/${m.id}`, {
+                                                    method: "PATCH",
+                                                    headers: { "Content-Type": "application/json" },
+                                                    body: JSON.stringify({ is_public: !m.is_public })
+                                                });
+                                                if (!res.ok) throw new Error("Failed to update model status.");
+                                                mutateProviders();
+                                                toast({ type: "success", description: `Model ${m.name} is now ${!m.is_public ? 'PUBLIC' : 'PRIVATE'}.` });
+                                            } catch (err: any) { toast({ type: "error", description: err.message }); }
+                                        }}
+                                    >
+                                        <CpuIcon className={`size-3 ${m.is_public ? 'text-primary' : 'text-muted-foreground'}`} />
                                         {m.alias || m.name}
                                         <div className={`size-1.5 rounded-full ${m.is_active ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-muted-foreground opacity-30 font-bold font-mono'}`} />
                                     </div>

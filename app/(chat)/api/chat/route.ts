@@ -24,12 +24,17 @@ export async function POST(request: Request) {
 
   // 1b. Guest Mode Logic: Call public demo endpoint
   if (isGuest) {
+    const modelId = selectedChatModel || "hacxgpt/hacxgpt-lightning";
+    const slashIdx = modelId.indexOf("/");
+    const targetModelName = slashIdx > 0 ? modelId.slice(slashIdx + 1) : modelId;
+
     try {
       const demoRes = await publicFetch("/api/chat/demo", {
         method: "POST",
         body: JSON.stringify({
           message: currentMessageStr,
           messages: messages || [], // pass history if any (for multi-turn demo)
+          override_model: targetModelName,
         }),
       });
 

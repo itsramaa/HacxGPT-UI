@@ -1,4 +1,4 @@
-import { backendFetch, backendJSON } from "@/lib/api";
+import { backendFetch, backendJSON, publicFetch } from "@/lib/api";
 import { ChatbotError } from "@/lib/errors";
 
 export async function GET() {
@@ -6,6 +6,17 @@ export async function GET() {
     const keys = await backendJSON("/api/keys");
     return Response.json(keys);
   } catch (err) {
+    // If unauthorized, fallback to demo/public keys
+    if (err instanceof ChatbotError && err.type === "unauthorized") {
+      try {
+        const res = await publicFetch("/api/keys/demo");
+        if (!res.ok) return Response.json([]);
+        const demoKeys = await res.json();
+        return Response.json(demoKeys);
+      } catch (demoErr) {
+        return Response.json([]);
+      }
+    }
     if (err instanceof ChatbotError) return err.toResponse();
     console.error("Error fetching keys:", err);
     return new ChatbotError("offline:chat").toResponse();

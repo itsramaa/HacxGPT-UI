@@ -126,19 +126,21 @@ export function AppSidebar({ user }: { user: User | undefined }) {
               <SidebarGroup className="pt-1">
                 <SidebarGroupContent>
                   <SidebarMenu>
-                    <SidebarMenuItem>
-                      <SidebarMenuButton
-                        className="h-8 rounded-lg border border-sidebar-border text-[13px] text-sidebar-foreground/70 transition-colors duration-150 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
-                        onClick={() => {
-                          setOpenMobile(false);
-                          router.push("/");
-                        }}
-                        tooltip="New Chat"
-                      >
-                        <PenSquareIcon className="size-4" />
-                        <span className="font-medium">New chat</span>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
+                    {pathname !== "/chat/demo" && (
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          className="h-8 rounded-lg border border-sidebar-border text-[13px] text-sidebar-foreground/70 transition-colors duration-150 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+                          onClick={() => {
+                            setOpenMobile(false);
+                            router.push("/");
+                          }}
+                          tooltip="New Chat"
+                        >
+                          <PenSquareIcon className="size-4" />
+                          <span className="font-medium">New chat</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    )}
                     {user && (
                       <SidebarMenuItem>
                         <SidebarMenuButton
@@ -169,20 +171,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
           {isAdminPage && <SidebarAdmin />}
         </SidebarContent>
         <SidebarFooter className="border-t border-r border-sidebar-border/50 bg-sidebar-accent/5 p-2">
-          {user ? (
-            <SidebarUserNav user={user} />
-          ) : (
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  asChild
-                  className="bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground"
-                >
-                  <Link href="/login">Sign In</Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          )}
+          {user && <SidebarUserNav user={user} />}
           <div className="px-2 py-1 text-[10px] text-sidebar-foreground/30 flex items-center justify-between group-data-[collapsible=icon]:hidden">
             <span>© 2026 Holycan</span>
             <span className="opacity-50">v{process.env.NEXT_PUBLIC_APP_VERSION || "1.2.0"}</span>

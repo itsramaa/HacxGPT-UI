@@ -32,11 +32,14 @@ export default auth((req: NextRequest & { auth: any }) => {
     return NextResponse.next();
   }
 
-  if (!isLoggedIn) {
+  const isGuestAllowed = 
+    pathname.startsWith("/chat/demo") || 
+    pathname.startsWith(`${base}/chat/demo`);
+
+  if (!isLoggedIn && !isGuestAllowed) {
     // Stash the current URL so we can redirect back after login
-    const loginUrl = new URL(`${base}/login`, req.url);
-    loginUrl.searchParams.set("callbackUrl", pathname);
-    return NextResponse.redirect(loginUrl);
+    const demoUrl = new URL(`${base}/chat/demo`, req.url);
+    return NextResponse.redirect(demoUrl);
   }
 
   // If the user has a NextAuth session but the backend token is missing,
@@ -52,6 +55,6 @@ export default auth((req: NextRequest & { auth: any }) => {
 
 export const config = {
   matcher: [
-    "/((?!api|_next/static|_next/image|.*\\.png$|.*\\.ico$|.*\\.svg$).*)",
+    "/((?!api|_next/static|_next/image|.*\\.js$|.*\\.css$|.*\\.png$|.*\\.ico$|.*\\.svg$).*)",
   ],
 };

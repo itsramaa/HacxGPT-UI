@@ -39,12 +39,20 @@ export function GuestLimitDialog() {
         </AlertDialogHeader>
         <AlertDialogFooter className="mt-4 flex-col gap-2 sm:flex-col sm:space-x-0">
           <AlertDialogAction 
-            className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
+            className="w-full bg-primary text-primary-foreground hover:bg-primary/90 shadow-[0_0_15px_rgba(var(--primary-rgb),0.3)]"
             onClick={() => router.push("/register")}
           >
             Create Free Account
           </AlertDialogAction>
-          <AlertDialogCancel className="w-full border-none bg-transparent hover:bg-muted">
+          
+          <AlertDialogAction 
+            className="w-full border border-primary/40 bg-background hover:bg-muted text-foreground transition-colors"
+            onClick={() => router.push("/login")}
+          >
+            Sign In to Existing Node
+          </AlertDialogAction>
+
+          <AlertDialogCancel className="w-full border-none bg-transparent hover:bg-muted opacity-60 text-xs">
             Maybe later
           </AlertDialogCancel>
         </AlertDialogFooter>

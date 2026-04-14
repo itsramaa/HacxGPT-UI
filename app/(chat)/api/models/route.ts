@@ -1,31 +1,36 @@
 import { type ChatModel, chatModels } from "@/lib/ai/models";
-import { backendJSON } from "@/lib/api";
+import { publicFetch } from "@/lib/api";
 import { getAccessToken } from "@/lib/auth-token";
-import { ChatbotError } from "@/lib/errors";
 
 const cacheHeaders = { "Cache-Control": "no-cache, must-revalidate" };
 
 export async function GET() {
   const token = await getAccessToken();
   
-  if (!token) {
-    return Response.json(
-      { models: chatModels, capabilities: {} },
-      { headers: cacheHeaders }
-    );
-  }
-
   try {
-    const providers = await backendJSON<any[]>("/api/providers");
+    // Use publicFetch to avoid auto-auth throw for guests
+    const res = await publicFetch("/api/providers", {
+        headers: token ? { "Authorization": `Bearer ${token}` } : {}
+    });
+    const providers = await res.json() as any[];
+    
     const dynamicModels: ChatModel[] = [];
     const capabilities: Record<string, any> = {};
 
     for (const p of providers) {
       if (!p.models || !Array.isArray(p.models)) continue;
       
-      const hasKey = p.has_key || p.name === "hacxgpt";
+      // Determine if a key is available specifically for this request context
+      const hasKeyAvailable = token 
+        ? (p.has_key || p.has_public_key)
+        : (p.has_public_key);
 
       for (const m of p.models) {
+        // Guests should only see models that are both public AND have a key
+        const modelHasKey = token 
+            ? (hasKeyAvailable || m.is_public)
+            : (p.has_public_key && m.is_public);
+
         const id = `${p.name}/${m.name}`;
         dynamicModels.push({
           id,
@@ -33,7 +38,7 @@ export async function GET() {
           providerId: p.id,
           providerName: p.name,
           description: `Model from ${p.name}`,
-          hasKey,
+          hasKey: modelHasKey,
         });
         capabilities[id] = {
           tools: true,
@@ -49,26 +54,25 @@ export async function GET() {
 
     // Merge curated + dynamic, no duplicates
     const curatedIds = new Set(chatModels.map((m) => m.id));
-    const mergedModels = [
+    let mergedModels = [
       ...chatModels,
       ...dynamicModels.filter((m) => !curatedIds.has(m.id)),
     ];
+
+    // Filter out unusable models for guests (don't show what they can't use)
+    if (!token) {
+      mergedModels = mergedModels.filter(m => m.hasKey);
+    }
 
     return Response.json(
       { models: mergedModels, capabilities },
       { headers: cacheHeaders }
     );
   } catch (err) {
-    if (err instanceof ChatbotError && err.message.includes("unauthorized")) {
-      return Response.json(
-        { models: chatModels, capabilities: {} },
-        { headers: cacheHeaders }
-      );
-    }
-    console.error("Error fetching models from backend:", err);
+    console.warn("Backend providers fetch failed or restricted, falling back to curated list.", err);
     return Response.json(
-      { error: "offline", models: chatModels, capabilities: {} },
-      { status: 503, headers: cacheHeaders }
+      { models: chatModels, capabilities: {} },
+      { headers: cacheHeaders }
     );
   }
 }

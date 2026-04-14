@@ -56,6 +56,7 @@ type ActiveChatContextValue = {
   activeTool: string | null;
   setActiveTool: Dispatch<SetStateAction<string | null>>;
   isGuest: boolean;
+  isModelAvailable: boolean;
 };
 
 const ActiveChatContext = createContext<ActiveChatContextValue | null>(null);
@@ -117,6 +118,23 @@ export function ActiveChatProvider({ children, session }: { children: ReactNode,
       }
     }
   };
+
+  const isModelAvailable = useMemo(() => {
+    if (!allModels?.models) return true; // Still allow while loading to avoid flickering
+    const model = allModels.models.find((m: any) => m.id === currentModelId);
+    if (!model) return false; // If model is selected but not in the list, treat as unavailable
+    return !!model.hasKey;
+  }, [allModels, currentModelId]);
+
+  // Auto-switch to available model for Guests if current one is broken 
+  useEffect(() => {
+    if (isGuest && allModels?.models && !isModelAvailable) {
+      const firstAvailable = allModels.models.find((m: any) => m.hasKey);
+      if (firstAvailable) {
+        setCurrentModelState(firstAvailable.id);
+      }
+    }
+  }, [allModels, isModelAvailable, isGuest]);
 
   const currentModelIdRef = useRef(currentModelId);
   useEffect(() => {
@@ -280,7 +298,11 @@ export function ActiveChatProvider({ children, session }: { children: ReactNode,
       }
     },
     onError: (error) => {
-      if (error.message?.includes("Guest limit reached")) {
+      const isGuestLimit = 
+        (error as any).cause?.includes("Guest limit reached") ||
+        error.message?.includes("Guest limit reached");
+
+      if (isGuestLimit) {
         window.dispatchEvent(new CustomEvent("hacxgpt:guest-limit-reached"));
         return;
       }
@@ -313,6 +335,11 @@ export function ActiveChatProvider({ children, session }: { children: ReactNode,
 
     if (!parentId) {
       toast({ type: "error", description: "Cannot regenerate: original prompt not found." });
+      return;
+    }
+
+    if (!isModelAvailable) {
+      toast({ type: "error", description: "Please configure an API key for this model first!" });
       return;
     }
 
@@ -490,6 +517,7 @@ export function ActiveChatProvider({ children, session }: { children: ReactNode,
       searchQuery,
       setSearchQuery,
       isGuest,
+      isModelAvailable,
     }),
     [
       chatId,
@@ -515,6 +543,7 @@ export function ActiveChatProvider({ children, session }: { children: ReactNode,
       searchQuery,
       setSearchQuery,
       isGuest,
+      isModelAvailable,
     ]
   );
 

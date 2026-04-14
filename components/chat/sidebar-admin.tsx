@@ -38,6 +38,11 @@ export function SidebarAdmin() {
        url: "/admin/providers",
        icon: DatabaseIcon,
     },
+    {
+       title: "System Keys",
+       url: "/admin/keys",
+       icon: ShieldCheckIcon,
+    },
   ];
 
   const controlItems = [

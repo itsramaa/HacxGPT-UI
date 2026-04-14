@@ -1,7 +1,8 @@
 "use client";
 
-import { MoonIcon, PanelLeftIcon, SearchIcon, SunIcon } from "lucide-react";
+import { MoonIcon, PanelLeftIcon, SearchIcon, SunIcon, LogInIcon } from "lucide-react";
 import { useTheme } from "next-themes";
+import Link from "next/link";
 import { memo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,7 +21,7 @@ function PureChatHeader({
 }) {
   const { state, toggleSidebar, isMobile } = useSidebar();
   const { theme, setTheme, resolvedTheme } = useTheme();
-  const { searchQuery, setSearchQuery } = useActiveChat();
+  const { searchQuery, setSearchQuery, isGuest } = useActiveChat();
 
   if (state === "collapsed" && !isMobile) {
     return null;
@@ -59,6 +60,14 @@ function PureChatHeader({
       </div>
 
       <div className="flex items-center gap-2">
+        {isGuest && (
+          <Button asChild size="sm" className="h-8 rounded-lg px-4 bg-primary text-primary-foreground hover:bg-primary/90 transition-all active:scale-95 text-xs font-bold">
+            <Link href="/login" className="flex items-center gap-2">
+              <LogInIcon className="size-3.5" />
+              Sign In
+            </Link>
+          </Button>
+        )}
       </div>
     </header>
   );
