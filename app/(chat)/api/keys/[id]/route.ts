@@ -1,8 +1,9 @@
+import type { NextRequest } from "next/server";
 import { backendFetch } from "@/lib/api";
 import { ChatbotError } from "@/lib/errors";
 
 export async function PATCH(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -22,7 +23,7 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  _request: Request,
+  _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -52,7 +53,7 @@ export async function DELETE(
 }
 
 export async function GET(
-  _request: Request,
+  _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   // We don't have a direct get single key in backend api usually,

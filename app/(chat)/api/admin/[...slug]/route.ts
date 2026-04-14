@@ -2,7 +2,10 @@ import type { NextRequest } from "next/server";
 import { auth } from "@/app/(auth)/auth";
 import { backendJSON } from "@/lib/api";
 
-async function proxyRequest(request: NextRequest, { params }: { params: any }) {
+async function proxyRequest(
+  request: NextRequest,
+  { params }: { params: Promise<{ slug: string[] }> }
+) {
   const session = await auth();
   if (!session?.user?.accessToken) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
