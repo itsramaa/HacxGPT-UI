@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronUp } from "lucide-react";
+import { ChevronUp, ShieldCheckIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import type { User } from "next-auth";
 import { signOut, useSession } from "next-auth/react";
@@ -108,6 +108,18 @@ export function SidebarUserNav({ user }: { user: User }) {
                 Profile
               </div>
             </DropdownMenuItem>
+
+            {profile?.role === "admin" && (
+              <DropdownMenuItem
+                className="cursor-pointer text-[13px] font-semibold text-orange-400 py-2 border-b border-border/20 rounded-none"
+                onSelect={() => router.push("/admin")}
+              >
+                <div className="flex items-center gap-2">
+                   <ShieldCheckIcon className="size-4" />
+                   Admin Dashboard
+                </div>
+              </DropdownMenuItem>
+            )}
 
             {displayUsage !== undefined && (
               <>
