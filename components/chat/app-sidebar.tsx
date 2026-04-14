@@ -150,6 +150,10 @@ export function AppSidebar({ user }: { user: User | undefined }) {
         </SidebarContent>
         <SidebarFooter className="border-t border-sidebar-border pt-2 pb-3">
           {user && <SidebarUserNav user={user} />}
+          <div className="px-2 py-1 text-[10px] text-sidebar-foreground/30 flex items-center justify-between group-data-[collapsible=icon]:hidden">
+            <span>© 2026 Kawasan Digital</span>
+            <span className="opacity-50">v{process.env.NEXT_PUBLIC_APP_VERSION || "1.2.0"}</span>
+          </div>
         </SidebarFooter>
         <SidebarRail />
       </Sidebar>
