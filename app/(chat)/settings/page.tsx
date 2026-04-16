@@ -84,7 +84,7 @@ export default function SettingsPage() {
     `/api/providers?all=true&page=${hubPage}&size=${HUB_ITEMS_PER_PAGE}&q=${encodeURIComponent(hubDebouncedQuery)}`,
     fetcher
   );
-  
+
   const { data: preferences, mutate: mutatePrefs } = useSWR(
     "/api/providers/preferences",
     fetcher
@@ -395,7 +395,7 @@ export default function SettingsPage() {
                             <SelectValue placeholder="Select Platform..." />
                           </SelectTrigger>
                           <SelectContent className="backdrop-blur-2xl border-border/40">
-                            {allProviders?.map((p) => (
+                            {allProviders?.map((p: any) => (
                               <SelectItem key={p.id} value={p.id}>
                                 {p.name.charAt(0).toUpperCase() + p.name.slice(1)}
                               </SelectItem>
@@ -768,7 +768,7 @@ export default function SettingsPage() {
                         />
                         <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground/50" />
                       </div>
-                      
+
                       <div className="flex items-center gap-2 self-end sm:self-auto">
                         <Button
                           variant="outline"
@@ -842,13 +842,13 @@ export default function SettingsPage() {
                                       </div>
                                     ))}
                                   </div>
-                                  
+
                                   {totalPages > 1 && (
                                     <div className="flex justify-end items-center gap-2 pr-2">
                                       <Button
                                         variant="ghost" size="sm" className="h-6 px-2 text-[10px] hover:bg-white/5"
                                         disabled={currentPage === 1}
-                                        onClick={() => setModelPages(prev => ({...prev, [p.id]: currentPage - 1}))}
+                                        onClick={() => setModelPages(prev => ({ ...prev, [p.id]: currentPage - 1 }))}
                                       >
                                         Prev
                                       </Button>
@@ -856,7 +856,7 @@ export default function SettingsPage() {
                                       <Button
                                         variant="ghost" size="sm" className="h-6 px-2 text-[10px] hover:bg-white/5"
                                         disabled={currentPage >= totalPages}
-                                        onClick={() => setModelPages(prev => ({...prev, [p.id]: currentPage + 1}))}
+                                        onClick={() => setModelPages(prev => ({ ...prev, [p.id]: currentPage + 1 }))}
                                       >
                                         Next
                                       </Button>

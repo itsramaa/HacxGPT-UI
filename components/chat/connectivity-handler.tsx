@@ -14,15 +14,19 @@ export function ConnectivityHandler({
   const REQUIRED_SUCCESSES = 2; // Verify stable before showing app
 
   const checkConnection = useCallback(async () => {
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), 5000);
+
     try {
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/models`,
         {
           method: "GET",
           cache: "no-store",
-          signal: AbortController.timeout ? AbortController.timeout(5000) : undefined, // Timeout after 5s
+          signal: controller.signal,
         }
       );
+      clearTimeout(id);
 
       // If we get an error response or network failure
       if (response.ok) {
