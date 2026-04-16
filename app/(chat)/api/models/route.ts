@@ -4,15 +4,26 @@ import { getAccessToken } from "@/lib/auth-token";
 
 const cacheHeaders = { "Cache-Control": "no-cache, must-revalidate" };
 
-export async function GET() {
+export async function GET(req: Request) {
+  const { searchParams } = new URL(req.url);
+  const q = searchParams.get("q") || "";
+  const page = parseInt(searchParams.get("page") || "1");
+  const size = parseInt(searchParams.get("size") || "200");
+
   const token = await getAccessToken();
 
   try {
-    // Use publicFetch to avoid auto-auth throw for guests
-    const res = await publicFetch("/api/providers", {
+    // Forward params to backend
+    const qs = new URLSearchParams();
+    if (q) { qs.set("q", q); }
+    qs.set("page", page.toString());
+    qs.set("size", size.toString());
+
+    const res = await publicFetch(`/api/providers?${qs.toString()}`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     });
-    const providers = (await res.json()) as any[];
+    const paginated = (await res.json()) as any;
+    const providers = paginated.items || [];
 
     const dynamicModels: ChatModel[] = [];
     const capabilities: Record<string, any> = {};
@@ -20,13 +31,11 @@ export async function GET() {
     for (const p of providers) {
       if (!p.models || !Array.isArray(p.models)) { continue; }
 
-      // Determine if a key is available specifically for this request context
       const hasKeyAvailable = token
         ? p.has_key || p.has_public_key
         : p.has_public_key;
 
       for (const m of p.models) {
-        // Guests should only see models that are both public AND have a key
         const modelHasKey = token
           ? hasKeyAvailable || m.is_public
           : p.has_public_key && m.is_public;
@@ -39,6 +48,8 @@ export async function GET() {
           providerName: p.name,
           description: `Model from ${p.name}`,
           hasKey: modelHasKey,
+          isFree: m.is_free,
+          isRecommended: m.is_recommended,
         });
         capabilities[id] = {
           tools: true,
@@ -52,30 +63,43 @@ export async function GET() {
       }
     }
 
-    // Merge curated + dynamic, no duplicates
-    const curatedIds = new Set(chatModels.map((m) => m.id));
-    let mergedModels = [
-      ...chatModels,
-      ...dynamicModels.filter((m) => !curatedIds.has(m.id)),
-    ];
+    // Merge curated + dynamic
+    let mergedModels = [...dynamicModels];
+    
+    // If not searching, merge with curated (curated are usually high priority)
+    if (!q || q.length < 2) {
+      const curatedIds = new Set(chatModels.map((m) => m.id));
+      mergedModels = [
+        ...chatModels,
+        ...dynamicModels.filter((m) => !curatedIds.has(m.id)),
+      ];
+    } else {
+      // If searching, keep dynamic models that matched from backend
+      // and maybe some curated that match locally
+      const curatedMatch = chatModels.filter(m => m.name.toLowerCase().includes(q.toLowerCase()) || m.id.toLowerCase().includes(q.toLowerCase()));
+      const dynamicFiltered = dynamicModels.filter(m => !curatedMatch.some(cm => cm.id === m.id));
+      mergedModels = [...curatedMatch, ...dynamicFiltered];
+    }
 
-    // Filter out unusable models for guests (don't show what they can't use)
     if (!token) {
       mergedModels = mergedModels.filter((m) => m.hasKey);
     }
 
     return Response.json(
-      { models: mergedModels, capabilities },
+      { 
+        models: mergedModels, 
+        capabilities,
+        total: paginated.total || mergedModels.length,
+        page,
+        size
+      },
       { headers: cacheHeaders }
     );
   } catch (err) {
-    console.warn(
-      "Backend providers fetch failed or restricted, falling back to curated list.",
-      err
-    );
+    console.error("Backend providers fetch failed:", err);
     return Response.json(
-      { models: chatModels, capabilities: {} },
-      { headers: cacheHeaders }
+      { error: "Failed to fetch models from backend" },
+      { status: 503, headers: cacheHeaders }
     );
   }
 }

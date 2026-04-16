@@ -119,3 +119,33 @@ export async function publicFetch(
     headers: finalHeaders,
   });
 }
+
+/**
+ * Convenience wrapper for POST requests with JSON body.
+ */
+export async function backendPOST<T = unknown>(
+  path: string,
+  body: any,
+  options: FetchOptions = {}
+): Promise<T> {
+  const res = await backendFetch(path, {
+    ...options,
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+  return res.json() as Promise<T>;
+}
+
+/**
+ * Convenience wrapper for DELETE requests.
+ */
+export async function backendDELETE<T = unknown>(
+  path: string,
+  options: FetchOptions = {}
+): Promise<T> {
+  const res = await backendFetch(path, {
+    ...options,
+    method: "DELETE",
+  });
+  return res.json() as Promise<T>;
+}

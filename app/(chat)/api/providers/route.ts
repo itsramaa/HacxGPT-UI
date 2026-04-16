@@ -1,9 +1,12 @@
 import { backendJSON } from "@/lib/api";
 import { ChatbotError } from "@/lib/errors";
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    const providers = await backendJSON("/api/providers");
+    const { searchParams } = new URL(req.url);
+    const qs = searchParams.toString();
+    const endpoint = `/api/providers${qs ? `?${qs}` : ""}`;
+    const providers = await backendJSON(endpoint);
     return Response.json(providers);
   } catch (err) {
     if (err instanceof ChatbotError) { return err.toResponse(); }

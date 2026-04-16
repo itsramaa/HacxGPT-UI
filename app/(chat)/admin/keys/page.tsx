@@ -89,6 +89,26 @@ export default function PublicKeysAdminPage() {
     }
   };
 
+  const [isRevalidating, setIsRevalidating] = useState(false);
+
+  const handleRevalidate = async () => {
+    setIsRevalidating(true);
+    try {
+      const res = await fetch("/api/admin/revalidate-keys", { method: "POST" });
+      if (!res.ok) { throw new Error("Failed to trigger revalidation."); }
+      toast({
+        type: "success",
+        description: "Key re-validation protocol initiated in the background.",
+      });
+      // Optionally mutate keys to see updates if they happen fast, but usually it takes time
+      setTimeout(mutateKeys, 5000);
+    } catch (error: any) {
+      toast({ type: "error", description: error.message });
+    } finally {
+      setIsRevalidating(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex justify-center p-20">
@@ -107,13 +127,29 @@ export default function PublicKeysAdminPage() {
           <ShieldCheckIcon className="size-5 text-emerald-500" /> System Neural
           Vault
         </h2>
-        <Button
-          className="rounded-xl flex items-center gap-2 font-black uppercase tracking-widest text-[10px]"
-          onClick={() => setIsAddOpen(true)}
-          size="sm"
-        >
-          <PlusIcon className="size-3" /> LINK_SYSTEM_KEY
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            className="rounded-xl flex items-center gap-2 font-black uppercase tracking-widest text-[10px] border-emerald-500/20 text-emerald-500 hover:bg-emerald-500/10"
+            disabled={isRevalidating}
+            onClick={handleRevalidate}
+            size="sm"
+            variant="outline"
+          >
+            {isRevalidating ? (
+              <LoaderIcon className="size-3 animate-spin" />
+            ) : (
+              <RefreshCwIcon className="size-3" />
+            )}
+            REVALIDATE_KEYS
+          </Button>
+          <Button
+            className="rounded-xl flex items-center gap-2 font-black uppercase tracking-widest text-[10px]"
+            onClick={() => setIsAddOpen(true)}
+            size="sm"
+          >
+            <PlusIcon className="size-3" /> LINK_SYSTEM_KEY
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

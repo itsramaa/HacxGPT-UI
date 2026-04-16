@@ -60,6 +60,8 @@ type ActiveChatContextValue = {
   setActiveTool: Dispatch<SetStateAction<string | null>>;
   isGuest: boolean;
   isModelAvailable: boolean;
+  useSearch: boolean;
+  setUseSearch: Dispatch<SetStateAction<boolean>>;
 };
 
 const ActiveChatContext = createContext<ActiveChatContextValue | null>(null);
@@ -102,6 +104,8 @@ export function ActiveChatProvider({
 
   const setCurrentModelId = async (id: string) => {
     setCurrentModelState(id);
+    // Mark as initialized so the background sync doesn't overwrite it
+    hasInitializedModel.current = chatId;
 
     // 1. Persist to cookie for new chats inheritance
     document.cookie = `chat-model=${encodeURIComponent(id)}; path=/; max-age=31536000`;
@@ -179,6 +183,7 @@ export function ActiveChatProvider({
 
   const [versionMap, setVersionMap] = useState<Record<string, number>>({});
   const [activeTool, setActiveTool] = useState<string | null>(null);
+  const [useSearch, setUseSearch] = useState(false);
 
   useEffect(() => {
     if (chatData?.activeVersions) {
@@ -261,6 +266,7 @@ export function ActiveChatProvider({
             ...(attachmentIds.length > 0
               ? { attachment_ids: attachmentIds }
               : {}),
+            use_search: useSearch,
             ...request.body,
           },
         };
@@ -418,11 +424,17 @@ export function ActiveChatProvider({
     if (loadedChatIds.current.has(chatId)) {
       return;
     }
-    if (chatData?.messages) {
+    // Only overwrite if we have new messages from the server, 
+    // or if the server explicitly confirms it's an existing chat but empty.
+    if (chatData?.messages && (chatData.messages.length > 0 || !isLoading)) {
       loadedChatIds.current.add(chatId);
-      setMessages(chatData.messages);
+      // We only call setMessages if the incoming data actually contains something
+      // or if we're switching between old chats (to avoid clearing new chat local state)
+      if (chatData.messages.length > 0) {
+        setMessages(chatData.messages);
+      }
     }
-  }, [chatId, chatData?.messages, setMessages]);
+  }, [chatId, chatData?.messages, isLoading, setMessages]);
 
   const prevChatIdRef = useRef(chatId);
   useEffect(() => {
@@ -433,11 +445,19 @@ export function ActiveChatProvider({
       }
     }
   }, [chatId, isNewChat, setMessages]);
+  
+  const hasInitializedModel = useRef<string | null>(null);
 
   useEffect(() => {
+    // If we already initialized the model for THIS chat instance, stop.
+    if (hasInitializedModel.current === chatId) {
+      return;
+    }
+
     if (chatData && !isNewChat) {
       if (chatData.modelId) {
         setCurrentModelState(chatData.modelId);
+        hasInitializedModel.current = chatId;
       } else {
         const cookieModel = document.cookie
           .split("; ")
@@ -445,6 +465,7 @@ export function ActiveChatProvider({
           ?.split("=")[1];
         if (cookieModel) {
           setCurrentModelState(decodeURIComponent(cookieModel));
+          hasInitializedModel.current = chatId;
         }
       }
     } else if (isNewChat) {
@@ -454,9 +475,10 @@ export function ActiveChatProvider({
         ?.split("=")[1];
       if (cookieModel) {
         setCurrentModelState(decodeURIComponent(cookieModel));
+        hasInitializedModel.current = chatId;
       }
     }
-  }, [chatData, isNewChat]);
+  }, [chatData, isNewChat, chatId]);
 
   const hasAppendedQueryRef = useRef(false);
   useEffect(() => {
@@ -558,6 +580,8 @@ export function ActiveChatProvider({
       setSearchQuery,
       isGuest,
       isModelAvailable,
+      useSearch,
+      setUseSearch,
     }),
     [
       chatId, 
@@ -582,7 +606,8 @@ export function ActiveChatProvider({
       handleRegenerate, 
       searchQuery, 
       isGuest, 
-      isModelAvailable, activeTool
+      isModelAvailable, activeTool,
+      useSearch, setUseSearch
     ]
   );
 

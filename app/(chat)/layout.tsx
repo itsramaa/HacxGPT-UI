@@ -5,6 +5,7 @@ import { Toaster } from "sonner";
 import { AppSidebar } from "@/components/chat/app-sidebar";
 import { DataStreamProvider } from "@/components/chat/data-stream-provider";
 import { ChatShell } from "@/components/chat/shell";
+import { ScrollToTop } from "@/components/chat/scroll-to-top";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { ActiveChatProvider } from "@/hooks/use-active-chat";
 import { auth } from "../(auth)/auth";
@@ -61,6 +62,7 @@ async function SidebarShell({
             {children}
           </div>
         </SidebarInset>
+        <ScrollToTop />
       </ActiveChatProvider>
     </SidebarProvider>
   );

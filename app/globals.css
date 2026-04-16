@@ -533,7 +533,16 @@ textarea:focus-visible {
 }
 
 .markdown-content pre {
-  @apply my-4 overflow-hidden rounded-xl border border-border/50 bg-secondary/30;
+  @apply my-4 overflow-x-auto rounded-xl border border-border/50 bg-secondary/30;
+  scrollbar-width: thin;
+}
+
+.markdown-content pre code {
+  @apply block min-w-full p-4 font-mono text-[13px] leading-relaxed;
+  white-space: pre;
+  word-spacing: normal;
+  word-break: normal;
+  word-wrap: normal;
 }
 
 .markdown-content blockquote {

@@ -1,5 +1,6 @@
 import { auth } from "@/app/(auth)/auth";
 import { backendJSON } from "@/lib/api";
+import { ChatbotError } from "@/lib/errors";
 
 export async function GET() {
   const session = await auth();
@@ -13,6 +14,9 @@ export async function GET() {
     return Response.json(profile);
   } catch (err) {
     console.error("Error fetching profile proxy:", err);
+    if (err instanceof ChatbotError) {
+      return err.toResponse();
+    }
     return Response.json({ error: "Failed to fetch profile" }, { status: 500 });
   }
 }

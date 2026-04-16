@@ -859,6 +859,17 @@ export const PromptInputTextarea = ({
         if (e.shiftKey) {
           return;
         }
+
+        // On mobile devices, Enter should always create a new line rather than sending.
+        const isMobile =
+          typeof window !== "undefined" &&
+          (window.matchMedia("(pointer: coarse)").matches ||
+            /Android|iPhone|iPad|iPod/i.test(navigator.userAgent));
+
+        if (isMobile) {
+          return;
+        }
+
         e.preventDefault();
 
         // Check if the submit button is disabled before submitting

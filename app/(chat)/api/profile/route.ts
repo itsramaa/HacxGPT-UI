@@ -9,8 +9,8 @@ export async function GET() {
     });
     return Response.json(user);
   } catch (err) {
-    if (err instanceof ChatbotError && err.message.includes("unauthorized")) {
-      return new Response("Unauthorized", { status: 401 });
+    if (err instanceof ChatbotError) {
+      return err.toResponse();
     }
     return new Response("Internal Server Error", { status: 500 });
   }
@@ -32,7 +32,10 @@ export async function PATCH(request: Request) {
     revalidateTag("profile", "fetch");
     const user = await res.json();
     return Response.json(user);
-  } catch (_err) {
+  } catch (err) {
+    if (err instanceof ChatbotError) {
+      return err.toResponse();
+    }
     return new Response("Internal Server Error", { status: 500 });
   }
 }
@@ -52,7 +55,10 @@ export async function POST(request: Request) {
 
     revalidateTag("profile", "fetch");
     return Response.json({ success: true });
-  } catch (_err) {
+  } catch (err) {
+    if (err instanceof ChatbotError) {
+      return err.toResponse();
+    }
     return new Response("Internal Server Error", { status: 500 });
   }
 }

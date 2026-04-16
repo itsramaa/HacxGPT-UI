@@ -11,7 +11,7 @@ import { usePathname, useRouter } from "next/navigation";
 import type { User } from "next-auth";
 import { signOut, useSession } from "next-auth/react";
 import { useTheme } from "next-themes";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import useSWR from "swr";
 import {
   DropdownMenu,
@@ -48,7 +48,13 @@ export function SidebarUserNav({ user }: { user: User }) {
     status === "authenticated" ? "/api/auth/me" : null,
     async (url) => {
       const res = await fetch(url);
-      if (!res.ok) { throw new Error("Failed to fetch profile"); }
+      if (res.status === 401) {
+        signOut({ redirectTo: "/" });
+        return null;
+      }
+      if (!res.ok) {
+        throw new Error("Failed to fetch profile");
+      }
       return res.json();
     },
     { revalidateOnFocus: false }
@@ -67,10 +73,17 @@ export function SidebarUserNav({ user }: { user: User }) {
   const pathname = usePathname();
   const isAdminPath = pathname?.startsWith("/admin");
 
+  const [open, setOpen] = useState(false);
+
+  // Close when pathname changes
+  useEffect(() => {
+    setOpen(false);
+  }, [pathname]);
+
   return (
     <SidebarMenu>
       <SidebarMenuItem>
-        <DropdownMenu>
+        <DropdownMenu onOpenChange={setOpen} open={open}>
           <DropdownMenuTrigger asChild>
             {status === "loading" ? (
               <SidebarMenuButton className="h-10 justify-between rounded-lg bg-transparent text-sidebar-foreground/50 transition-colors duration-150 data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground">
@@ -138,22 +151,6 @@ export function SidebarUserNav({ user }: { user: User }) {
               </DropdownMenuItem>
             )}
 
-            {displayUsage !== undefined && (
-              <>
-                <div className="px-2 py-1.5 text-[11px] text-muted-foreground font-medium uppercase tracking-wider pt-2">
-                  Total Usage: {displayUsage.toLocaleString()} tokens
-                </div>
-                <DropdownMenuSeparator />
-              </>
-            )}
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              className="cursor-pointer text-[13px]"
-              onSelect={() => router.push("/settings")}
-            >
-              Settings
-            </DropdownMenuItem>
-
             <DropdownMenuItem
               className="cursor-pointer text-[13px] flex items-center justify-between"
               onSelect={() =>
@@ -172,6 +169,25 @@ export function SidebarUserNav({ user }: { user: User }) {
                 {resolvedTheme === "light" ? "Dark" : "Light"}
               </span>
             </DropdownMenuItem>
+
+            <DropdownMenuSeparator />
+
+            {displayUsage !== undefined && (
+              <>
+                <div className="px-2 py-1.5 text-[11px] text-muted-foreground font-medium uppercase tracking-wider">
+                  Total Usage: {displayUsage.toLocaleString()} tokens
+                </div>
+                <DropdownMenuSeparator />
+              </>
+            )}
+
+            <DropdownMenuItem
+              className="cursor-pointer text-[13px]"
+              onSelect={() => router.push("/settings")}
+            >
+              Settings
+            </DropdownMenuItem>
+
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild data-testid="user-nav-item-auth">
               <button

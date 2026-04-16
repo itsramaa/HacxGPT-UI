@@ -76,7 +76,21 @@ export async function POST(request: Request) {
                   writer.write({ type: "text-start", id: textPartId });
                   textStarted = true;
                 }
-                if (parsed.tool_call) {
+                if (parsed.error) {
+                  const errorStr = String(parsed.error);
+                  let description = "";
+                  if (errorStr.includes("429")) {
+                    description = " (Too Many Requests — Guest mode is busy. Please try again or sign in.)";
+                  } else if (errorStr.includes("503") || errorStr.includes("502")) {
+                    description = " (Provider Overhead — Demo engine is currently overloaded.)";
+                  }
+                  
+                  writer.write({
+                    type: "text-delta",
+                    id: textPartId,
+                    delta: `\n\n> ⚠️ **ERROR: ${errorStr}**\n> ${description}\n\n`,
+                  });
+                } else if (parsed.tool_call) {
                   writer.write({
                     type: "data-tool-call",
                     data: parsed.tool_call,
@@ -110,9 +124,11 @@ export async function POST(request: Request) {
 
   let providerId = "";
   try {
-    const providersRes = await backendFetch("/api/providers");
+    // Increase size limit to ensure we hit the resolving provider without paginating
+    const providersRes = await backendFetch("/api/providers?size=200");
     if (providersRes.ok) {
-      const providers = await providersRes.json();
+      const payload = await providersRes.json();
+      const providers = payload.items || [];
       // Match by name or ID (fallback to first provider if nothing matches)
       const match = providers.find(
         (p: any) => p.name === providerKey || p.id === providerKey
@@ -242,10 +258,26 @@ export async function POST(request: Request) {
               }
 
               if (parsed.error) {
+                // Enhance error message with description
+                const errorStr = String(parsed.error);
+                let description = "";
+                
+                if (errorStr.includes("429")) {
+                  description = " (Too Many Requests — The provider is rate-limiting your key. Please wait a few seconds.)";
+                } else if (errorStr.includes("401")) {
+                  description = " (Unauthorized — Your API key is invalid or has expired.)";
+                } else if (errorStr.includes("403")) {
+                  description = " (Forbidden — You don't have access to this specific model.)";
+                } else if (errorStr.includes("503") || errorStr.includes("502")) {
+                  description = " (Provider Overhead — The AI service is currently overloaded or down.)";
+                } else if (errorStr.includes("404")) {
+                  description = " (Not Found — The model ID might be deprecated or incorrect.)";
+                }
+
                 writer.write({
                   type: "text-delta",
                   id: textPartId,
-                  delta: `\n\n*Error: ${parsed.error}*\n\n`,
+                  delta: `\n\n> ⚠️ **ERROR: ${errorStr}**\n> ${description}\n\n`,
                 });
               } else if (parsed.tool_call) {
                 writer.write({

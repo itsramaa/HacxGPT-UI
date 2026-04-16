@@ -20,6 +20,8 @@ export type ChatModel = {
   providerName: string; // Display name of provider (e.g. 'openai')
   description: string;
   hasKey?: boolean;
+  isFree?: boolean;
+  isRecommended?: boolean;
 };
 
 // These will be overridden by dynamic fetching in the UI,

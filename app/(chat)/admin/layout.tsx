@@ -11,6 +11,7 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { cloneElement, useEffect } from "react";
 import useSWR from "swr";
+import { MobileHeader } from "@/components/chat/mobile-header";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -45,54 +46,57 @@ export default function AdminLayout({
 
   return (
     <div className="flex flex-col h-full bg-background overflow-hidden font-sans">
-      <div className="flex flex-col gap-6 p-6 max-w-7xl mx-auto w-full overflow-y-auto pb-20">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-orange-500/10 text-orange-500 border border-orange-500/20">
-              <ShieldCheckIcon className="size-6" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight">
-                System Mainframe
-              </h1>
-              <p className="text-muted-foreground text-xs font-mono uppercase tracking-widest opacity-70">
-                Privileged Access Level 4
-              </p>
+      <MobileHeader title="Admin Mainframe" />
+      <div className="flex-1 overflow-y-auto">
+        <div className="flex flex-col gap-6 p-4 md:p-6 max-w-7xl mx-auto w-full pb-20">
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-orange-500/10 text-orange-500 border border-orange-500/20">
+                <ShieldCheckIcon className="size-6" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold tracking-tight">
+                  System Mainframe
+                </h1>
+                <p className="text-muted-foreground text-xs font-mono uppercase tracking-widest opacity-70">
+                  Privileged Access Level 4
+                </p>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <StatCard
-            color="primary"
-            icon={<UsersIcon />}
-            label="Global Nodes"
-            value={stats?.total_users ?? 0}
-          />
-          <StatCard
-            color="emerald"
-            icon={<BarChart3Icon />}
-            label="Live Sessions"
-            value={stats?.total_sessions ?? 0}
-          />
-          <StatCard
-            color="orange"
-            icon={<CpuIcon />}
-            label="Active models"
-            value={stats?.total_models ?? 0}
-          />
-          <StatCard
-            color="emerald"
-            icon={<SettingsIcon />}
-            label="API Status"
-            value="ONLINE"
-          />
-        </div>
+          {/* Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <StatCard
+              color="primary"
+              icon={<UsersIcon />}
+              label="Global Nodes"
+              value={stats?.total_users ?? 0}
+            />
+            <StatCard
+              color="emerald"
+              icon={<BarChart3Icon />}
+              label="Live Sessions"
+              value={stats?.total_sessions ?? 0}
+            />
+            <StatCard
+              color="orange"
+              icon={<CpuIcon />}
+              label="Active models"
+              value={stats?.total_models ?? 0}
+            />
+            <StatCard
+              color="emerald"
+              icon={<SettingsIcon />}
+              label="API Status"
+              value="ONLINE"
+            />
+          </div>
 
-        <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
-          {children}
+          <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
+            {children}
+          </div>
         </div>
       </div>
     </div>

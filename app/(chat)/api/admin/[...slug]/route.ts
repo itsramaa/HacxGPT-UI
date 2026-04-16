@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import { auth } from "@/app/(auth)/auth";
 import { backendJSON } from "@/lib/api";
+import { ChatbotError } from "@/lib/errors";
 
 async function proxyRequest(
   request: NextRequest,
@@ -34,9 +35,12 @@ async function proxyRequest(
     return Response.json(data);
   } catch (err: any) {
     console.error(`Error proxying admin ${request.method} ${finalPath}:`, err);
+    if (err instanceof ChatbotError) {
+      return err.toResponse();
+    }
     return Response.json(
       { error: err.message || "Failed to proxy request" },
-      { status: err.status || 500 }
+      { status: 500 }
     );
   }
 }

@@ -1,8 +1,9 @@
+import type { NextRequest } from "next/server";
 import { backendFetch } from "@/lib/api";
 import { ChatbotError } from "@/lib/errors";
 
 export async function PATCH(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
@@ -28,7 +29,7 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  _request: Request,
+  _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
