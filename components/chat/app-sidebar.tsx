@@ -129,13 +129,13 @@ export function AppSidebar({ user }: { user: User | undefined }) {
         <SidebarContent className="gap-0 border-r border-sidebar-border/50">
           {!isAdminPage && (
             <>
-              <SidebarGroup className="pt-1">
+              <SidebarGroup className="sticky top-0 z-20 bg-sidebar/95 backdrop-blur-md pb-4 pt-1 shadow-[0_1px_0_0_rgba(255,255,255,0.05)] md:relative md:top-auto md:z-auto md:bg-transparent md:backdrop-blur-none md:pb-2 md:shadow-none">
                 <SidebarGroupContent>
                   <SidebarMenu>
                     {pathname !== "/chat/demo" && (
                       <SidebarMenuItem>
                         <SidebarMenuButton
-                          className="h-8 rounded-lg border border-sidebar-border text-[13px] text-sidebar-foreground/70 transition-colors duration-150 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+                          className="h-9 rounded-xl border border-sidebar-border/60 bg-sidebar-accent/30 text-[13px] text-sidebar-foreground transition-all duration-200 hover:bg-sidebar-accent hover:text-sidebar-foreground active:scale-[0.98] md:h-8 md:rounded-lg md:border-sidebar-border md:bg-transparent md:text-sidebar-foreground/70 md:hover:bg-sidebar-accent/50"
                           onClick={() => {
                             setOpenMobile(false);
                             router.push("/");
@@ -143,19 +143,19 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                           tooltip="New Chat"
                         >
                           <PenSquareIcon className="size-4" />
-                          <span className="font-medium">New chat</span>
+                          <span className="font-semibold">New chat</span>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
                     )}
                     {user && (
                       <SidebarMenuItem>
                         <SidebarMenuButton
-                          className="rounded-lg text-sidebar-foreground/40 transition-colors duration-150 hover:bg-destructive/10 hover:text-destructive"
+                          className="rounded-xl text-sidebar-foreground/50 transition-all duration-200 hover:bg-destructive/10 hover:text-destructive active:scale-[0.98] md:rounded-lg md:text-sidebar-foreground/40"
                           onClick={() => setShowDeleteAllDialog(true)}
                           tooltip="Delete All Chats"
                         >
                           <TrashIcon className="size-4" />
-                          <span className="text-[13px]">Delete all</span>
+                          <span className="text-[13px] font-medium">Delete all</span>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
                     )}
