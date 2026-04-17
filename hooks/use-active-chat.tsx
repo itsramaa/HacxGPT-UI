@@ -135,11 +135,13 @@ export function ActiveChatProvider({
   };
 
   const isModelAvailable = useMemo(() => {
-    if (!allModels?.models) { return true; // Still allow while loading to avoid flickering
-}
+    if (!allModels?.models) {
+      return true; // Still allow while loading to avoid flickering
+    }
     const model = allModels.models.find((m: any) => m.id === currentModelId);
-    if (!model) { return false; // If model is selected but not in the list, treat as unavailable
-}
+    if (!model) {
+      return false; // If model is selected but not in the list, treat as unavailable
+    }
     return !!model.hasKey;
   }, [allModels, currentModelId]);
 
@@ -190,6 +192,16 @@ export function ActiveChatProvider({
       setVersionMap(chatData.activeVersions);
     }
   }, [chatData?.activeVersions]);
+
+  const useSearchRef = useRef(useSearch);
+  useEffect(() => {
+    useSearchRef.current = useSearch;
+  }, [useSearch]);
+
+  const visibilityRef = useRef(visibility);
+  useEffect(() => {
+    visibilityRef.current = visibility;
+  }, [visibility]);
 
   const router = useRouter();
 
@@ -262,11 +274,11 @@ export function ActiveChatProvider({
               ? { messages: request.messages }
               : { message: lastMessage }),
             selectedChatModel: currentModelIdRef.current,
-            selectedVisibilityType: visibility,
+            selectedVisibilityType: visibilityRef.current,
+            use_search: useSearchRef.current,
             ...(attachmentIds.length > 0
               ? { attachment_ids: attachmentIds }
               : {}),
-            use_search: useSearch,
             ...request.body,
           },
         };
@@ -275,15 +287,16 @@ export function ActiveChatProvider({
     onData: (dataPart) => {
       setDataStream((ds) => (ds ? [...ds, dataPart as any] : []));
 
-      // Real-time usage update attempt
+      // Real-time tool/usage update
       try {
         const part = dataPart as any;
-        if (part?.usage) {
-          // If we see usage in the stream, we can at least know it's coming
-          // Revalidating the session might be too frequent here,
-          // so we mostly rely on onFinish but could update a local state if needed.
+        if (part?.tool_call) {
+          setActiveTool(part.tool_call);
         }
-      } catch (_e) {}
+        if (part?.usage) {
+          // update local usage state if needed
+        }
+      } catch (_e) { }
     },
     onFinish: (_message) => {
       setActiveTool(null);
@@ -445,7 +458,7 @@ export function ActiveChatProvider({
       }
     }
   }, [chatId, isNewChat, setMessages]);
-  
+
   const hasInitializedModel = useRef<string | null>(null);
 
   useEffect(() => {
@@ -584,28 +597,28 @@ export function ActiveChatProvider({
       setUseSearch,
     }),
     [
-      chatId, 
-      filteredMessages, 
-      messages, 
-      setMessages, 
-      sendMessage, 
-      status, 
-      stop, 
-      regenerate, 
-      addToolApprovalResponse, 
-      input, 
-      visibility, 
-      isReadonly, 
-      isFetchingSession, 
-      currentModelId, 
-      showSettings, 
-      versionMap, 
-      setCurrentModelId, 
-      setPendingAttachmentIds, 
-      switchVersion, 
-      handleRegenerate, 
-      searchQuery, 
-      isGuest, 
+      chatId,
+      filteredMessages,
+      messages,
+      setMessages,
+      sendMessage,
+      status,
+      stop,
+      regenerate,
+      addToolApprovalResponse,
+      input,
+      visibility,
+      isReadonly,
+      isFetchingSession,
+      currentModelId,
+      showSettings,
+      versionMap,
+      setCurrentModelId,
+      setPendingAttachmentIds,
+      switchVersion,
+      handleRegenerate,
+      searchQuery,
+      isGuest,
       isModelAvailable, activeTool,
       useSearch, setUseSearch
     ]

@@ -1,8 +1,9 @@
 "use client";
+import { useMemo } from "react";
 import type { UseChatHelpers } from "@ai-sdk/react";
 import { useActiveChat } from "@/hooks/use-active-chat";
 import type { ChatMessage } from "@/lib/types";
-import { cn, sanitizeText } from "@/lib/utils";
+import { cn, sanitizeText, parseReasoning } from "@/lib/utils";
 import { MessageContent, MessageResponse } from "../ai-elements/message";
 import { Shimmer } from "../ai-elements/shimmer";
 import { useDataStream } from "./data-stream-provider";
@@ -41,19 +42,44 @@ const PurePreviewMessage = ({
   const isUser = message.role === "user";
   const isAssistant = message.role === "assistant";
 
-  const hasAnyContent = message.parts?.some(
-    (part) =>
-      (part.type === "text" && part.text?.trim().length > 0) ||
-      (part.type === "reasoning" &&
-        "text" in part &&
-        part.text?.trim().length > 0) ||
-      part.type.startsWith("tool-")
-  );
-  const isThinking = isAssistant && isLoading && !hasAnyContent;
+  // 1. Process all parts to extract reasoning and actual content
+  const processedMessage = useMemo(() => {
+    let reasoningText = "";
+    let messageContent = "";
+    let isReasoningStreaming = false;
+    let hasTools = false;
+
+    message.parts?.forEach((part) => {
+      if (part.type === "reasoning") {
+        reasoningText += (reasoningText ? "\n\n" : "") + (part.text || "");
+        if ("state" in part && part.state === "streaming") isReasoningStreaming = true;
+      } else if (part.type === "text") {
+        const { reasoning, content } = parseReasoning(part.text);
+        if (reasoning) {
+          reasoningText += (reasoningText ? "\n\n" : "") + reasoning;
+          if (isLoading && !part.text.includes("</think>")) isReasoningStreaming = true;
+        }
+        messageContent += content;
+      } else if (part.type.startsWith("tool-")) {
+        hasTools = true;
+      }
+    });
+
+    return {
+      reasoningText: reasoningText.trim(),
+      messageContent: messageContent.trim(),
+      isReasoningStreaming,
+      hasTools,
+      hasAnyDisplayableContent: messageContent.trim().length > 0 || hasTools,
+    };
+  }, [message.parts, isLoading]);
 
   const attachments = attachmentsFromMessage.length > 0 && (
     <div
-      className="flex flex-row justify-end gap-2"
+      className={cn(
+        "flex flex-row gap-2",
+        isUser ? "justify-end" : "justify-start"
+      )}
       data-testid={"message-attachments"}
     >
       {attachmentsFromMessage.map((attachment) => (
@@ -69,56 +95,51 @@ const PurePreviewMessage = ({
     </div>
   );
 
-  const mergedReasoning = message.parts?.reduce(
-    (acc, part) => {
-      if (part.type === "reasoning" && part.text?.trim().length > 0) {
-        return {
-          text: acc.text ? `${acc.text}\n\n${part.text}` : part.text,
-          isStreaming: "state" in part ? part.state === "streaming" : false,
-          rendered: false,
-        };
-      }
-      return acc;
-    },
-    { text: "", isStreaming: false, rendered: false }
-  ) ?? { text: "", isStreaming: false, rendered: false };
+  // 2. Determine if we should show the global "Thinking..." shimmer
+  // (Only if no content, no tools, and no reasoning text yet)
+  const isThinking = isAssistant && isLoading &&
+    !processedMessage.hasAnyDisplayableContent &&
+    !processedMessage.reasoningText;
 
-  const parts = message.parts?.map((part, index) => {
-    const { type } = part;
-    const key = `message-${message.id}-part-${index}`;
+  const reasoningDropdown = processedMessage.reasoningText && (
+    <MessageReasoning
+      isLoading={isLoading || processedMessage.isReasoningStreaming}
+      key={`reasoning-${message.id}`}
+      reasoning={processedMessage.reasoningText}
+    />
+  );
 
-    if (type === "reasoning") {
-      if (!mergedReasoning.rendered && mergedReasoning.text) {
-        mergedReasoning.rendered = true;
+  const parts = message.parts
+    ?.map((part, index) => {
+      const { type } = part;
+      const key = `message-${message.id}-part-${index}`;
+
+      if (type === "reasoning") return null; // Handled by reasoningDropdown
+
+      if (type === "text") {
+        const { content } = parseReasoning(part.text);
+        const finalContent = sanitizeText(content);
+
+        if (!finalContent.trim()) return null;
+
         return (
-          <MessageReasoning
-            isLoading={isLoading || mergedReasoning.isStreaming}
+          <MessageContent
+            className={cn({
+              "text-[13px] leading-[1.65] w-fit max-w-full overflow-hidden break-words rounded-2xl rounded-tr-lg sm:rounded-2xl sm:rounded-br-lg border border-border/30 bg-gradient-to-br from-secondary to-muted px-4 py-2.5 shadow-[var(--shadow-card)]":
+                message.role === "user",
+              "markdown-content": message.role === "assistant",
+            })}
+            data-testid="message-content"
             key={key}
-            reasoning={mergedReasoning.text}
-          />
+          >
+            <MessageResponse>{finalContent}</MessageResponse>
+          </MessageContent>
         );
       }
+
       return null;
-    }
-
-    if (type === "text") {
-      return (
-        <MessageContent
-          className={cn({
-            "text-[13px] leading-[1.65] w-fit max-w-[min(80%,56ch)] overflow-hidden break-words rounded-2xl rounded-br-lg border border-border/30 bg-gradient-to-br from-secondary to-muted px-3.5 py-2 shadow-[var(--shadow-card)]":
-              message.role === "user",
-            "markdown-content": message.role === "assistant",
-          })}
-          data-testid="message-content"
-          key={key}
-        >
-          <MessageResponse>{sanitizeText(part.text)}</MessageResponse>
-        </MessageContent>
-      );
-    }
-
-    return null;
-  });
+    })
+    .filter(Boolean);
 
   const actions = !isReadonly && (
     <MessageActions
@@ -141,11 +162,12 @@ const PurePreviewMessage = ({
       </Shimmer>
     </div>
   ) : (
-    <>
+    <div className={cn("flex flex-col gap-2", isUser && "items-end")}>
       {attachments}
+      {reasoningDropdown}
       {parts}
       {actions}
-    </>
+    </div>
   );
 
   return (

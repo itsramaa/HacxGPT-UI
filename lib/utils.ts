@@ -16,16 +16,27 @@ export function dispatchOfflineEvent() {
   }
 }
 
+async function safeParseJson(response: Response) {
+  const contentType = response.headers.get("content-type");
+  if (contentType && contentType.includes("application/json")) {
+    return response.json();
+  }
+  return null;
+}
+
 export const fetcher = async (url: string) => {
   try {
     const response = await fetch(url);
 
     if (!response.ok) {
-      const data = await response.json();
-      if (data.error === "offline") {
+      const data = await safeParseJson(response);
+      if (data?.error === "offline") {
         dispatchOfflineEvent();
       }
-      throw new ChatbotError(data.code as ErrorCode, data.cause);
+      throw new ChatbotError(
+        data?.code as ErrorCode,
+        data?.cause || `HTTP ${response.status}: ${response.statusText}`
+      );
     }
 
     return response.json();
@@ -45,11 +56,14 @@ export async function fetchWithErrorHandlers(
     const response = await fetch(input, init);
 
     if (!response.ok) {
-      const data = await response.json();
-      if (data.error === "offline") {
+      const data = await safeParseJson(response);
+      if (data?.error === "offline") {
         dispatchOfflineEvent();
       }
-      throw new ChatbotError(data.code as ErrorCode, data.cause);
+      throw new ChatbotError(
+        data?.code as ErrorCode, 
+        data?.cause || `HTTP ${response.status}: ${response.statusText}`
+      );
     }
 
     return response;
@@ -79,9 +93,38 @@ export function sanitizeText(text: string) {
   return text.replace('<has_function_call>', '');
 }
 
+export function parseReasoning(text: string): { reasoning: string; content: string } {
+  const thinkStart = text.indexOf("<think>");
+  if (thinkStart === -1) {
+    return { reasoning: "", content: text };
+  }
+
+  const thinkEnd = text.indexOf("</think>", thinkStart);
+  if (thinkEnd === -1) {
+    // Still thinking (streaming)
+    const reasoning = text.substring(thinkStart + 7);
+    return { reasoning: reasoning, content: "" };
+  }
+
+  // Finished thinking
+  const reasoning = text.substring(thinkStart + 7, thinkEnd);
+  const content = text.substring(thinkEnd + 8).trim();
+  
+  // Handle multiple think blocks if they exist (though rare)
+  if (content.includes("<think>")) {
+    const next = parseReasoning(content);
+    return {
+      reasoning: reasoning + (next.reasoning ? "\n\n" + next.reasoning : ""),
+      content: next.content,
+    };
+  }
+
+  return { reasoning, content };
+}
+
 export function getTextFromMessage(message: ChatMessage | UIMessage): string {
   return message.parts
-    .filter((part) => part.type === 'text')
-    .map((part) => (part as { type: 'text'; text: string}).text)
-    .join('');
+    .filter((part) => part.type === "text")
+    .map((part) => (part as { type: "text"; text: string }).text)
+    .join("");
 }
