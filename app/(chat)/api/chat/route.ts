@@ -8,7 +8,7 @@ export const maxDuration = 60;
 
 export async function POST(request: Request) {
   const json = await request.json();
-  const { id, message, messages, selectedChatModel, attachment_ids } = json;
+  const { id, message, messages, selectedChatModel, attachment_ids, use_search, temperature } = json;
 
   // Extract message text
   const currentMessageStr =
@@ -36,6 +36,8 @@ export async function POST(request: Request) {
           message: currentMessageStr,
           messages: messages || [], // pass history if any (for multi-turn demo)
           override_model: targetModelName,
+          use_search: use_search || false,
+          temperature: temperature ?? 0.7,
         }),
       });
 
@@ -182,6 +184,8 @@ export async function POST(request: Request) {
       session_id: actualSessionId,
       message: currentMessageStr,
       override_model: modelName,
+      use_search: use_search || false,
+      temperature: temperature ?? 0.75,
     };
 
     if (Array.isArray(attachment_ids) && attachment_ids.length > 0) {
