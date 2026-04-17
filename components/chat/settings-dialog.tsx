@@ -52,6 +52,7 @@ export function SettingsDialog({
   const [keys, setKeys] = useState<ApiKey[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [userLang, setUserLang] = useState("auto");
 
   const ITEMS_PER_PAGE = 5;
   const [providerPage, setProviderPage] = useState(1);
@@ -74,12 +75,19 @@ export function SettingsDialog({
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const [pRes, kRes] = await Promise.all([
+      const [pRes, kRes, mRes] = await Promise.all([
         fetch("/api/providers"),
         fetch("/api/keys"),
+        fetch("/api/profile"),
       ]);
       if (pRes.ok) { setProviders(await pRes.json()); }
       if (kRes.ok) { setKeys(await kRes.json()); }
+      if (mRes.ok) { 
+        const profile = await mRes.json();
+        if (profile.language_preference) {
+          setUserLang(profile.language_preference);
+        }
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -251,6 +259,61 @@ export function SettingsDialog({
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto p-6 space-y-8 scrollbar-thin">
+          {/* Section: Language Preference */}
+          <section className="space-y-4">
+            <h3 className="text-sm font-semibold text-foreground/80 flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
+              Language Preference
+            </h3>
+            <div className="p-4 rounded-xl border border-border/40 bg-zinc-500/5 space-y-4">
+              <p className="text-[11px] text-muted-foreground leading-relaxed">
+                Force HacxGPT to respond in a specific language. If set to "Auto", the model will attempt to detect and match your input language.
+              </p>
+              <div className="flex flex-col md:flex-row gap-3 items-end">
+                <div className="space-y-2 flex-1 w-full">
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground ml-1">
+                    Select Language
+                  </label>
+                  <select
+                    className="w-full h-9 bg-background border border-border/40 rounded-lg px-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50"
+                    onChange={async (e) => {
+                       const newLang = e.target.value;
+                       try {
+                         const res = await fetch("/api/profile", {
+                           method: "PATCH",
+                           headers: { "Content-Type": "application/json" },
+                           body: JSON.stringify({ language_preference: newLang }),
+                         });
+                         if (res.ok) {
+                            toast.success(`Language set to ${newLang === "auto" ? "Auto Detect" : newLang}`);
+                            setUserLang(newLang);
+                            // Trigger profile refresh
+                            window.dispatchEvent(new CustomEvent("hacxgpt:usage-updated"));
+                         } else {
+                            toast.error("Failed to update language");
+                         }
+                       } catch (err) {
+                         toast.error("An error occurred");
+                       }
+                    }}
+                    value={userLang}
+                  >
+                    <option value="auto">Auto (Default)</option>
+                    <option value="Indonesian">Indonesian</option>
+                    <option value="English">English</option>
+                    <option value="Japanese">Japanese</option>
+                    <option value="Chinese">Chinese</option>
+                    <option value="Korean">Korean</option>
+                    <option value="French">French</option>
+                    <option value="German">German</option>
+                    <option value="Spanish">Spanish</option>
+                    <option value="Russian">Russian</option>
+                    <option value="Arabic">Arabic</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </section>
           {/* Section: Add New Key */}
           <section className="space-y-4">
             <h3 className="text-sm font-semibold text-foreground/80 flex items-center gap-2">

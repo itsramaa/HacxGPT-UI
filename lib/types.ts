@@ -55,6 +55,7 @@ export const backendUserSchema = z.object({
   full_name: z.string().nullable(),
   role: z.string(),
   is_active: z.boolean(),
+  language_preference: z.string().optional(),
   created_at: z.string(),
 });
 
