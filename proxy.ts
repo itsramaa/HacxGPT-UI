@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import NextAuth from "next-auth";
 import { authConfig } from "./lib/auth/auth.config";
-import { TOKEN_COOKIE_NAME } from "./lib/auth-token";
+import { TOKEN_COOKIE_NAME } from "./lib/auth/auth-token";
 
 const { auth } = NextAuth(authConfig);
 
@@ -32,6 +32,7 @@ export default auth((req: NextRequest & { auth: any }) => {
     return NextResponse.next();
   }
 
+  const isAdminPage = pathname.startsWith(`${base}/admin`);
   const isGuestAllowed =
     pathname.startsWith("/chat/demo") ||
     pathname.startsWith(`${base}/chat/demo`);
@@ -40,6 +41,12 @@ export default auth((req: NextRequest & { auth: any }) => {
     // Stash the current URL so we can redirect back after login
     const demoUrl = new URL(`${base}/chat/demo`, req.url);
     return NextResponse.redirect(demoUrl);
+  }
+
+  // Admin section hardening: strictly enforce role-based access
+  if (isAdminPage && req.auth?.user?.role !== "admin") {
+    console.warn(`Unauthorized admin access attempt by: ${req.auth?.user?.email}`);
+    return NextResponse.redirect(new URL(`${base}/`, req.url));
   }
 
   // If the user has a NextAuth session but the backend token is missing,
