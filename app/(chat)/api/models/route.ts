@@ -23,19 +23,20 @@ export async function GET(req: Request) {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     });
     const paginated = (await res.json()) as any;
-    const providers = paginated.items || [];
+    const providers = paginated?.items || [];
 
     const dynamicModels: ChatModel[] = [];
     const capabilities: Record<string, any> = {};
 
     for (const p of providers) {
-      if (!p.models || !Array.isArray(p.models)) { continue; }
+      if (!p || !p.models || !Array.isArray(p.models)) { continue; }
 
       const hasKeyAvailable = token
         ? p.has_key || p.has_public_key
         : p.has_public_key;
 
       for (const m of p.models) {
+        if (!m) continue;
         const modelHasKey = token
           ? hasKeyAvailable || m.is_public
           : p.has_public_key && m.is_public;

@@ -90,10 +90,10 @@ export function useSettingsConfig() {
   };
 
   return {
-    providers: providersData?.items || providersData || [],
+    providers: Array.isArray(providersData?.items) ? providersData.items : Array.isArray(providersData) ? providersData : [],
     providersLoading,
     models: modelsData?.models || [],
-    catalog: catalogData?.items || catalogData || [],
+    catalog: Array.isArray(catalogData?.items) ? catalogData.items : Array.isArray(catalogData) ? catalogData : [],
     catalogLoading,
     catalogTotal: catalogData?.total || 0,
     hubPage,

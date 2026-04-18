@@ -111,7 +111,7 @@ export function ActiveChatProvider({
 
     // 2. If existing chat, sync to backend session
     if (!isNewChat && !isGuest && allModels?.models) {
-      const modelDetail = allModels.models.find((m: any) => m.id === id);
+      const modelDetail = allModels.models.find((m: any) => m && m.id === id);
       if (modelDetail) {
         try {
           await fetch(`/api/history/${chatId}`, {
@@ -137,7 +137,7 @@ export function ActiveChatProvider({
     if (!allModels?.models) {
       return true; // Still allow while loading to avoid flickering
     }
-    const model = allModels.models.find((m: any) => m.id === currentModelId);
+    const model = allModels.models.find((m: any) => m && m.id === currentModelId);
     if (!model) {
       return false; // If model is selected but not in the list, treat as unavailable
     }
@@ -147,7 +147,7 @@ export function ActiveChatProvider({
   // Auto-switch to available model for Guests if current one is broken
   useEffect(() => {
     if (isGuest && allModels?.models && !isModelAvailable) {
-      const firstAvailable = allModels.models.find((m: any) => m.hasKey);
+      const firstAvailable = allModels.models.find((m: any) => m && m.hasKey);
       if (firstAvailable) {
         setCurrentModelState(firstAvailable.id);
       }

@@ -105,7 +105,7 @@ export function KeyVaultList({
           <div className="flex flex-wrap items-center gap-3 p-2 bg-muted/10 rounded-xl border border-border/10">
             <Button
               className="h-8 text-[10px] font-black hover:bg-black/40 hover:text-white transition-all flex items-center gap-2"
-              onClick={() => onToggleSelectAll(keys.map((k: any) => k.id))}
+              onClick={() => onToggleSelectAll(keys.filter(Boolean).map((k: any) => k.id))}
               size="sm"
               variant="ghost"
             >
@@ -195,11 +195,13 @@ export function KeyVaultList({
         </div>
       ) : (
         <div className="grid gap-4">
-          {keys.map((k) => (
-            <div
-              className={cn(
-                "group p-5 rounded-2xl border transition-all flex flex-col md:flex-row md:items-center justify-between gap-6 relative overflow-hidden",
-                selectedKeyIds.has(k.id)
+          {keys.map((k) => {
+            if (!k) return null;
+            return (
+              <div
+                className={cn(
+                  "group p-5 rounded-2xl border transition-all flex flex-col md:flex-row md:items-center justify-between gap-6 relative overflow-hidden",
+                  selectedKeyIds.has(k.id)
                   ? "border-primary/40 bg-primary/5 shadow-2xl shadow-primary/5"
                   : "border-border/30 bg-card/20 backdrop-blur-md hover:bg-card/40 hover:border-primary/30"
               )}
@@ -320,7 +322,8 @@ export function KeyVaultList({
                 </div>
               </div>
             </div>
-          ))}
+          );
+        })}
         </div>
       )}
     </section>

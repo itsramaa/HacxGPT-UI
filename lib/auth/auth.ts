@@ -101,7 +101,7 @@ export const {
 
   callbacks: {
     // ── JWT callback: runs every time the token is created / refreshed ────
-    jwt({ token, user }) {
+    jwt({ token, user, trigger, session }) {
       if (user) {
         // First sign-in — seed from the User object returned by authorize()
         token.id = user.id as string;
@@ -112,6 +112,13 @@ export const {
         token.accessTokenExpiresAt = user.accessToken
           ? Date.now() + ACCESS_TOKEN_TTL_MS
           : undefined;
+      }
+
+      // Handle session updates (e.g. from updateSession() in useSession)
+      if (trigger === "update" && session) {
+        if (session.role) token.role = session.role;
+        if (session.total_usage) token.total_usage = session.total_usage;
+        if (session.name) token.name = session.name;
       }
 
       return token;

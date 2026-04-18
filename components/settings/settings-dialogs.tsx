@@ -53,7 +53,7 @@ export function SettingsDialogs({
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground"
               onClick={() =>
-                onExecuteDelete(pendingDeleteData!.id, pendingDeleteData!.name)
+                onExecuteDelete(pendingDeleteData?.id || "", pendingDeleteData?.name || "")
               }
             >
               PURGE_NODE

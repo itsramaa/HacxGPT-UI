@@ -71,11 +71,14 @@ export function RegisterKeyForm({
                   <SelectValue placeholder="Select Platform..." />
                 </SelectTrigger>
                 <SelectContent className="backdrop-blur-2xl border-border/40">
-                  {providers?.map((p: any) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.name.charAt(0).toUpperCase() + p.name.slice(1)}
-                    </SelectItem>
-                  ))}
+                  {providers?.map((p: any) => {
+                    if (!p) return null;
+                    return (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.name.charAt(0).toUpperCase() + p.name.slice(1)}
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
             </div>

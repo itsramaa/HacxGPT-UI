@@ -113,6 +113,7 @@ export function ModelHubConfig({
           ) : (
             <div className="grid gap-4">
               {catalog?.map((p: any) => {
+                if (!p) return null;
                 const currentPage = modelPages[p.id] || 1;
                 const MODELS_PER_PAGE = 12;
                 const totalModelPages = Math.max(
@@ -163,11 +164,13 @@ export function ModelHubConfig({
                     {!disabledProviders.includes(p.id) && (
                       <div className="space-y-3">
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 pl-5 pt-2 border-l border-border/10 ml-1">
-                          {paginatedModels.map((m: any) => (
-                            <div
-                              className={cn(
-                                "flex items-center justify-between p-2 rounded-xl border transition-all cursor-pointer",
-                                !disabledModels.includes(m.id)
+                          {paginatedModels.map((m: any) => {
+                            if (!m) return null;
+                            return (
+                              <div
+                                className={cn(
+                                  "flex items-center justify-between p-2 rounded-xl border transition-all cursor-pointer",
+                                  !disabledModels.includes(m.id)
                                   ? "bg-primary/5 border-primary/20"
                                   : "bg-muted/10 border-border/10 opacity-50"
                               )}
@@ -188,9 +191,10 @@ export function ModelHubConfig({
                                 {!disabledModels.includes(m.id) && (
                                   <div className="size-1.5 bg-white rounded-full shadow-[0_0_5px_white]" />
                                 )}
+                                </div>
                               </div>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
 
                         {totalModelPages > 1 && (

@@ -55,8 +55,9 @@ export function useProfilePortal() {
         throw new Error(err.detail || "Update failed");
       }
 
-      await mutateUser();
-      await updateSession();
+      const updatedUser = await res.json();
+      await mutateUser(updatedUser, false);
+      await updateSession(updatedUser);
       toast.success("Profile updated successfully!");
     } catch (err: any) {
       toast.error(err.message);
