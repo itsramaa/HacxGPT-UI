@@ -5,10 +5,10 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useActionState, useEffect, useState } from "react";
 
-import { AuthForm } from "@/components/chat/auth-form";
+import { AuthForm } from "@/components/auth-form";
 import { SubmitButton } from "@/components/chat/submit-button";
-import { toast } from "@/components/chat/toast";
-import { type LoginActionState, login } from "../actions";
+import { toast } from "@/components/toast";
+import { type LoginActionState, login } from "../../../lib/auth/actions";
 
 export default function Page() {
   const router = useRouter();

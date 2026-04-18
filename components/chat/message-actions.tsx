@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { useCopyToClipboard } from "usehooks-ts";
 import { useActiveChat } from "@/hooks/use-active-chat";
 import type { ChatMessage } from "@/lib/types";
+import { getTextFromMessage } from "@/lib/utils";
 import {
   MessageAction as Action,
   MessageActions as Actions,
@@ -27,19 +28,14 @@ export function PureMessageActions({
     return null;
   }
 
-  const textFromParts = message.parts
-    ?.filter((part) => part.type === "text")
-    .map((part) => part.text)
-    .join("\n")
-    .trim();
-
   const handleCopy = async () => {
-    if (!textFromParts) {
+    const text = getTextFromMessage(message);
+    if (!text) {
       toast.error("There's no text to copy!");
       return;
     }
 
-    await copyToClipboard(textFromParts);
+    await copyToClipboard(text);
     toast.success("Copied to clipboard!");
   };
 

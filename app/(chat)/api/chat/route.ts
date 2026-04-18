@@ -1,21 +1,39 @@
 import { createUIMessageStream, createUIMessageStreamResponse } from "ai";
-import { auth } from "@/app/(auth)/auth";
+import { auth } from "@/lib/auth/auth";
 import { backendFetch, publicFetch } from "@/lib/api";
 import { ChatbotError } from "@/lib/errors";
 import { generateUUID } from "@/lib/utils";
+import { chatRequestBodySchema } from "./schema";
 
 export const maxDuration = 60;
 
 export async function POST(request: Request) {
   const json = await request.json();
-  const { id, message, messages, selectedChatModel, attachment_ids, use_search, temperature } = json;
+  const result = chatRequestBodySchema.safeParse(json);
 
-  // Extract message text
+  if (!result.success) {
+    return new Response(JSON.stringify({ error: "Invalid request body", details: result.error.format() }), {
+      status: 400,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  const {
+    id,
+    message,
+    messages,
+    selectedChatModel,
+    attachment_ids,
+    use_search,
+    temperature,
+  } = result.data;
+
+  // Extract message text from validated data
   const currentMessageStr =
-    message?.parts?.find((p: any) => p.type === "text")?.text ||
-    messages?.at(-1)?.parts?.find((p: any) => p.type === "text")?.text ||
     message?.content ||
+    message?.parts?.find((p) => p.type === "text")?.text ||
     messages?.at(-1)?.content ||
+    (messages?.at(-1)?.parts as any[])?.find((p: any) => p.type === "text")?.text ||
     "";
 
   // 1. Resolve Auth & Guest Mode
@@ -126,19 +144,21 @@ export async function POST(request: Request) {
 
   let providerId = "";
   try {
-    // Increase size limit to ensure we hit the resolving provider without paginating
-    const providersRes = await backendFetch("/api/providers?size=200");
+    // Optimized: Resolve providerId using a targeted search instead of fetching the whole catalogue
+    const providersRes = await backendFetch(
+      `/api/providers?q=${encodeURIComponent(providerKey || "")}`
+    );
     if (providersRes.ok) {
       const payload = await providersRes.json();
       const providers = payload.items || [];
-      // Match by name or ID (fallback to first provider if nothing matches)
+      // Match by name or ID
       const match = providers.find(
         (p: any) => p.name === providerKey || p.id === providerKey
       );
-      providerId = match?.id || providers[0]?.id;
+      providerId = match?.id || providers[0]?.id || "";
     }
   } catch (err) {
-    console.warn("Failed to fetch providers for resolution", err);
+    console.warn("Failed to fetch provider for resolution", err);
   }
 
   let actualSessionId = id;

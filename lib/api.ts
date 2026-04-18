@@ -3,7 +3,7 @@
  *
  * Centralized backend API client.
  *
- * All server-side code MUST use `backendFetch()` (or the typed wrappers)
+ * All server-side code MUST use `apiFetch()` (or the typed wrappers)
  * instead of calling `fetch` directly with a hardcoded Bearer header.
  *
  * Features:
@@ -14,7 +14,7 @@
 
 import "server-only";
 
-import { getAccessToken } from "./auth-token";
+import { getAccessToken } from "./auth/auth-token";
 import { ChatbotError } from "./errors";
 
 export const BACKEND_URL =

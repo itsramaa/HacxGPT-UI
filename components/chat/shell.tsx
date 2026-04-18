@@ -6,12 +6,13 @@ import { useActiveChat } from "@/hooks/use-active-chat";
 import type { Attachment, ChatMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { ChatHeader } from "./chat-header";
-import { DataStreamHandler } from "./data-stream-handler";
+import { DataStreamHandler } from "../data-stream-handler";
 import { GuestLimitDialog } from "./guest-limit-dialog";
-import { submitEditedMessage } from "./message-editor";
+import { submitEditedMessage } from "@/lib/chat/utils";
 import { Messages } from "./messages";
 import { MultimodalInput } from "./multimodal-input";
-import { SettingsDialog } from "./settings-dialog";
+
+import { useChatOrchestrator } from "@/hooks/use-chat-orchestrator";
 
 export function ChatShell() {
   const pathname = usePathname();
@@ -33,14 +34,17 @@ export function ChatShell() {
     isLoading,
     currentModelId,
     setCurrentModelId,
-    showSettings,
-    setShowSettings,
   } = useActiveChat();
 
-  const [editingMessage, setEditingMessage] = useState<ChatMessage | null>(
-    null
-  );
-  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const {
+    editingMessage,
+    setEditingMessage,
+    attachments,
+    setAttachments,
+    handleEditMessage,
+    handleCancelEdit,
+    handleSubmit,
+  } = useChatOrchestrator();
 
   const stopRef = useRef(stop);
   stopRef.current = stop;
@@ -53,7 +57,7 @@ export function ChatShell() {
       setEditingMessage(null);
       setAttachments([]);
     }
-  }, [chatId]);
+  }, [chatId, setEditingMessage, setAttachments]);
 
   if (!isChatRoute) {
     return null;
@@ -82,14 +86,7 @@ export function ChatShell() {
               isLoading={isLoading}
               isReadonly={isReadonly}
               messages={messages}
-              onEditMessage={(msg) => {
-                const text = msg.parts
-                  ?.filter((p) => p.type === "text")
-                  .map((p) => p.text)
-                  .join("");
-                setInput(text ?? "");
-                setEditingMessage(msg);
-              }}
+              onEditMessage={handleEditMessage}
               regenerate={regenerate}
               selectedModelId={currentModelId}
               setMessages={setMessages}
@@ -105,30 +102,11 @@ export function ChatShell() {
                   input={input}
                   isLoading={isLoading}
                   messages={messages}
-                  onCancelEdit={() => {
-                    setEditingMessage(null);
-                    setInput("");
-                  }}
+                  onCancelEdit={handleCancelEdit}
                   onModelChange={setCurrentModelId}
                   selectedModelId={currentModelId}
                   selectedVisibilityType={visibilityType}
-                  sendMessage={
-                    editingMessage
-                      ? async () => {
-                          const msg = editingMessage;
-                          setEditingMessage(null);
-                          await submitEditedMessage({
-                            message: msg,
-                            text: input,
-                            setMessages,
-                            regenerate,
-                          });
-                          setInput("");
-                        }
-                      : (msg) => {
-                          return sendMessage(msg);
-                        }
-                  }
+                  sendMessage={handleSubmit}
                   setAttachments={setAttachments}
                   setInput={setInput}
                   setMessages={setMessages}
@@ -142,7 +120,6 @@ export function ChatShell() {
       </div>
 
       <DataStreamHandler />
-      <SettingsDialog onOpenChange={setShowSettings} open={showSettings} />
       <GuestLimitDialog />
     </>
   );

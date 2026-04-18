@@ -29,7 +29,7 @@ export async function PATCH(request: Request) {
       return Response.json(error, { status: res.status });
     }
 
-    revalidateTag("profile", "fetch");
+    revalidateTag("profile");
     const user = await res.json();
     return Response.json(user);
   } catch (err) {

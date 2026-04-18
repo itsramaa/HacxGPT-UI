@@ -1,5 +1,5 @@
-import { auth } from "@/app/(auth)/auth";
-import { backendJSON } from "@/lib/api";
+import { auth } from "@/lib/auth/auth";
+import { backendFetch, backendJSON } from "@/lib/api";
 import { ChatbotError } from "@/lib/errors";
 import type { ChatMessage as UIChatMessage } from "@/lib/types";
 
@@ -47,7 +47,12 @@ export async function GET(request: Request) {
         parts = content.map((c: any) => {
           if (c.type === "text") { return { type: "text", text: c.text }; }
           if (c.type === "image_url") {
-            return { type: "image", image: c.image_url.url };
+            return {
+              type: "file",
+              url: c.image_url.url,
+              name: "Image",
+              mediaType: "image/png",
+            };
           }
           return c;
         });
@@ -59,6 +64,7 @@ export async function GET(request: Request) {
         id: msg.id,
         role: msg.role,
         parts,
+        createdAt: msg.created_at ? new Date(msg.created_at) : new Date(),
         metadata: {
           createdAt: msg.created_at,
           promptTokens: msg.prompt_tokens,
@@ -81,6 +87,38 @@ export async function GET(request: Request) {
   } catch (err) {
     if (err instanceof ChatbotError) { return err.toResponse(); }
     console.error("Error fetching messages:", err);
+    return Response.json({ error: "offline" }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const chatId = searchParams.get("chatId");
+
+  if (!chatId) {
+    return Response.json({ error: "chatId required" }, { status: 400 });
+  }
+
+  const session = await auth();
+  if (!session?.user) {
+    return new ChatbotError("unauthorized:chat").toResponse();
+  }
+
+  try {
+    const res = await backendFetch(`/api/sessions/${chatId}/history`, {
+      method: "DELETE",
+      rawOnError: true,
+    });
+
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({ error: "Failed to clear history" }));
+      return Response.json(errorData, { status: res.status });
+    }
+
+    return Response.json({ message: "history cleared" });
+  } catch (err) {
+    if (err instanceof ChatbotError) { return err.toResponse(); }
+    console.error("Error clearing history:", err);
     return Response.json({ error: "offline" }, { status: 500 });
   }
 }

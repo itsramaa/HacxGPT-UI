@@ -6,12 +6,15 @@ import type { ChatMessage } from "@/lib/types";
 import { cn, sanitizeText, parseReasoning } from "@/lib/utils";
 import { MessageContent, MessageResponse } from "../ai-elements/message";
 import { Shimmer } from "../ai-elements/shimmer";
-import { useDataStream } from "./data-stream-provider";
+import { useDataStream } from "../data-stream-provider";
 import { SparklesIcon } from "./icons";
 import { MessageActions } from "./message-actions";
 import { MessageReasoning } from "./message-reasoning";
 import { PreviewAttachment } from "./preview-attachment";
 import { VersionSwitcher } from "./version-switcher";
+
+import { motion } from "framer-motion";
+import { useProcessedMessage } from "@/hooks/use-processed-message";
 
 const PurePreviewMessage = ({
   chatId,
@@ -33,51 +36,20 @@ const PurePreviewMessage = ({
   requiresScrollPadding: boolean;
   onEdit?: (message: ChatMessage) => void;
 }) => {
-  const attachmentsFromMessage = message.parts.filter(
-    (part) => part.type === "file"
-  );
-
+  const processed = useProcessedMessage(message, isLoading);
   useDataStream();
 
   const isUser = message.role === "user";
   const isAssistant = message.role === "assistant";
 
-  // 1. Process all parts to extract reasoning and actual content
-  const processedMessage = useMemo(() => {
-    let reasoningText = "";
-    let messageContent = "";
-    let isReasoningStreaming = false;
-    let hasTools = false;
-
-    message.parts?.forEach((part) => {
-      if (part.type === "reasoning") {
-        reasoningText += (reasoningText ? "\n\n" : "") + (part.text || "");
-        if ("state" in part && part.state === "streaming") isReasoningStreaming = true;
-      } else if (part.type === "text") {
-        const { reasoning, content } = parseReasoning(part.text);
-        if (reasoning) {
-          reasoningText += (reasoningText ? "\n\n" : "") + reasoning;
-          if (isLoading && !part.text.includes("</think>")) isReasoningStreaming = true;
-        }
-        messageContent += content;
-      } else if (part.type.startsWith("tool-")) {
-        hasTools = true;
-      }
-    });
-
-    return {
-      reasoningText: reasoningText.trim(),
-      messageContent: messageContent.trim(),
-      isReasoningStreaming,
-      hasTools,
-      hasAnyDisplayableContent: messageContent.trim().length > 0 || hasTools,
-    };
-  }, [message.parts, isLoading]);
+  const attachmentsFromMessage = message.parts.filter(
+    (part) => part.type === "file"
+  );
 
   const attachments = attachmentsFromMessage.length > 0 && (
     <div
       className={cn(
-        "flex flex-row gap-2",
+        "flex flex-row gap-2 mt-1",
         isUser ? "justify-end" : "justify-start"
       )}
       data-testid={"message-attachments"}
@@ -95,28 +67,19 @@ const PurePreviewMessage = ({
     </div>
   );
 
-  // 2. Determine if we should show the global "Thinking..." shimmer
-  // (Only if no content, no tools, and no reasoning text yet)
-  const isThinking = isAssistant && isLoading &&
-    !processedMessage.hasAnyDisplayableContent &&
-    !processedMessage.reasoningText;
-
-  const reasoningDropdown = processedMessage.reasoningText && (
+  const reasoningDropdown = processed.reasoningText && (
     <MessageReasoning
-      isLoading={isLoading || processedMessage.isReasoningStreaming}
+      isLoading={isLoading || processed.isReasoningStreaming}
       key={`reasoning-${message.id}`}
-      reasoning={processedMessage.reasoningText}
+      reasoning={processed.reasoningText}
     />
   );
 
   const parts = message.parts
     ?.map((part, index) => {
-      const { type } = part;
-      const key = `message-${message.id}-part-${index}`;
+      if (part.type === "reasoning") return null;
 
-      if (type === "reasoning") return null; // Handled by reasoningDropdown
-
-      if (type === "text") {
+      if (part.type === "text") {
         const { content } = parseReasoning(part.text);
         const finalContent = sanitizeText(content);
 
@@ -130,7 +93,7 @@ const PurePreviewMessage = ({
               "markdown-content": message.role === "assistant",
             })}
             data-testid="message-content"
-            key={key}
+            key={`part-${index}`}
           >
             <MessageResponse>{finalContent}</MessageResponse>
           </MessageContent>
@@ -155,14 +118,14 @@ const PurePreviewMessage = ({
   const thinkingLabel =
     activeTool === "search_web" ? "Searching the web..." : "Thinking...";
 
-  const content = isThinking ? (
+  const content = processed.isThinking ? (
     <div className="flex h-[calc(13px*1.65)] items-center text-[13px] leading-[1.65]">
-      <Shimmer className="font-medium" duration={1}>
+      <Shimmer className="font-medium opacity-80" duration={1.5}>
         {thinkingLabel}
       </Shimmer>
     </div>
   ) : (
-    <div className={cn("flex flex-col gap-2", isUser && "items-end")}>
+    <div className={cn("flex flex-col gap-2.5", isUser && "items-end")}>
       {attachments}
       {reasoningDropdown}
       {parts}
@@ -185,11 +148,18 @@ const PurePreviewMessage = ({
         )}
       >
         {isAssistant && (
-          <div className="flex h-[calc(13px*1.65)] shrink-0 items-center">
-            <div className="flex size-7 items-center justify-center rounded-lg bg-muted/60 text-muted-foreground ring-1 ring-border/50">
+          <motion.div
+            animate={isLoading ? { opacity: [0.6, 1, 0.6] } : { opacity: 1 }}
+            className="flex h-[calc(13px*1.65)] shrink-0 items-center"
+            transition={{ duration: 2, repeat: Infinity }}
+          >
+            <div className="flex size-7 items-center justify-center rounded-lg bg-gradient-to-b from-muted to-muted/40 text-muted-foreground ring-1 ring-border/50 shadow-sm relative overflow-hidden group-hover/message:ring-primary/20 transition-all duration-300">
               <SparklesIcon size={13} />
+              {isLoading && (
+                <div className="absolute inset-0 bg-primary/5 animate-pulse" />
+              )}
             </div>
-          </div>
+          </motion.div>
         )}
         {isAssistant ? (
           <div className="flex min-w-0 flex-1 flex-col gap-2">
@@ -205,15 +175,19 @@ const PurePreviewMessage = ({
 };
 
 function VersionControl({ message }: { message: ChatMessage }) {
-  const { allMessages, versions, switchVersion } = useActiveChat();
+  const { allMessages, switchVersion } = useActiveChat();
   const parentId = message.metadata?.parentId;
-  if (!parentId) { return null; }
+  if (!parentId) {
+    return null;
+  }
 
   const siblings = allMessages
     .filter((m) => m.role === "assistant" && m.metadata?.parentId === parentId)
     .sort((a, b) => (a.metadata?.version ?? 0) - (b.metadata?.version ?? 0));
 
-  if (siblings.length <= 1) { return null; }
+  if (siblings.length <= 1) {
+    return null;
+  }
 
   const currentVersion = message.metadata?.version ?? 1;
   const totalVersions = siblings.length;
@@ -236,7 +210,7 @@ function VersionControl({ message }: { message: ChatMessage }) {
 
   return (
     <VersionSwitcher
-      className="mt-1"
+      className="mt-1.5 opacity-0 group-hover/message:opacity-100 transition-opacity"
       current={currentVersion}
       onNext={handleNext}
       onPrev={handlePrev}
@@ -261,13 +235,14 @@ export const ThinkingMessage = () => {
     >
       <div className="flex items-start gap-3">
         <div className="flex h-[calc(13px*1.65)] shrink-0 items-center">
-          <div className="flex size-7 items-center justify-center rounded-lg bg-muted/60 text-muted-foreground ring-1 ring-border/50">
+          <div className="flex size-7 items-center justify-center rounded-lg bg-muted/60 text-muted-foreground ring-1 ring-border/50 shadow-sm relative overflow-hidden">
             <SparklesIcon size={13} />
+            <div className="absolute inset-0 bg-primary/5 animate-pulse" />
           </div>
         </div>
 
         <div className="flex h-[calc(13px*1.65)] items-center text-[13px] leading-[1.65]">
-          <Shimmer className="font-medium" duration={1}>
+          <Shimmer className="font-medium opacity-80" duration={1.5}>
             {label}
           </Shimmer>
         </div>

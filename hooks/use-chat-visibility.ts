@@ -1,6 +1,6 @@
 "use client";
 
-import type { VisibilityType } from "@/components/chat/visibility-selector";
+import type { VisibilityType } from "@/components/sidebar/visibility-selector";
 
 /**
  * Stub — backend doesn't support public/private visibility yet.

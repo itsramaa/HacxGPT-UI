@@ -2,13 +2,13 @@ import { cookies } from "next/headers";
 import Script from "next/script";
 import { Suspense } from "react";
 import { Toaster } from "sonner";
-import { AppSidebar } from "@/components/chat/app-sidebar";
-import { DataStreamProvider } from "@/components/chat/data-stream-provider";
+import { AppSidebar } from "@/components/sidebar/app-sidebar";
+import { DataStreamProvider } from "@/components/data-stream-provider";
 import { ChatShell } from "@/components/chat/shell";
-import { ScrollToTop } from "@/components/chat/scroll-to-top";
+import { ScrollToTop } from "@/components/scroll-to-top";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { ActiveChatProvider } from "@/hooks/use-active-chat";
-import { auth } from "../(auth)/auth";
+import { auth } from "../../lib/auth/auth";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (

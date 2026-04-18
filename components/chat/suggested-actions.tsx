@@ -7,7 +7,9 @@ import { memo, useEffect, useState } from "react";
 import { suggestions } from "@/lib/constants";
 import type { ChatMessage } from "@/lib/types";
 import { Suggestion } from "../ai-elements/suggestion";
-import type { VisibilityType } from "./visibility-selector";
+import type { VisibilityType } from "../sidebar/visibility-selector";
+
+import { useSuggestedActions } from "@/hooks/use-suggested-actions";
 
 type SuggestedActionsProps = {
   chatId: string;
@@ -15,48 +17,51 @@ type SuggestedActionsProps = {
   selectedVisibilityType: VisibilityType;
 };
 
-function PureSuggestedActions({ chatId, sendMessage }: SuggestedActionsProps) {
+function PureSuggestedActions({ chatId }: SuggestedActionsProps) {
   const router = useRouter();
-  const [suggestedActions, setSuggestedActions] = useState<string[]>([]);
-
-  useEffect(() => {
-    setSuggestedActions(
-      [...suggestions].sort(() => 0.5 - Math.random()).slice(0, 4)
-    );
-  }, []);
+  const { suggestedActions } = useSuggestedActions(4);
 
   return (
     <div
-      className="flex w-full gap-2.5 overflow-x-auto pb-1 sm:grid sm:grid-cols-2 sm:overflow-visible"
+      className="flex w-full gap-3 overflow-x-auto pb-2 sm:grid sm:grid-cols-2 sm:overflow-visible"
       data-testid="suggested-actions"
       style={{
         scrollbarWidth: "none",
         WebkitOverflowScrolling: "touch",
-        msOverflowStyle: "none",
       }}
     >
       {suggestedActions.map((suggestedAction, index) => (
         <motion.div
-          animate={{ opacity: 1, y: 0 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
           className="min-w-[200px] shrink-0 sm:min-w-0 sm:shrink"
-          exit={{ opacity: 0, y: 16 }}
-          initial={{ opacity: 0, y: 16 }}
+          exit={{ opacity: 0, scale: 0.95 }}
+          initial={{ opacity: 0, y: 15, scale: 0.98 }}
           key={suggestedAction}
           transition={{
-            delay: 0.06 * index,
-            duration: 0.4,
+            delay: 0.05 * index,
+            duration: 0.5,
             ease: [0.22, 1, 0.36, 1],
           }}
         >
           <Suggestion
-            className="h-auto w-full whitespace-nowrap rounded-xl border border-border/50 bg-card/30 px-4 py-3 text-left text-[12px] leading-relaxed text-muted-foreground transition-all duration-200 sm:whitespace-normal sm:p-4 sm:text-[13px] hover:-translate-y-0.5 hover:bg-card/60 hover:text-foreground hover:shadow-[var(--shadow-card)]"
+            className="h-auto w-full group relative rounded-[16px] border border-border/40 bg-card/40 px-4 py-3.5 text-left transition-all duration-300 sm:p-5 hover:bg-card/70 hover:border-primary/20 hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:hover:shadow-[0_8px_30px_rgb(0,0,0,0.2)] hover:-translate-y-1 active:scale-[0.98]"
             onClick={(suggestion) => {
               const url = `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/chat/${chatId}?query=${encodeURIComponent(suggestion)}`;
               router.push(url);
             }}
             suggestion={suggestedAction}
           >
-            {suggestedAction}
+            <div className="flex flex-col gap-1.5">
+              <span className="text-[13px] font-medium leading-normal text-foreground/90 group-hover:text-primary transition-colors duration-300">
+                {suggestedAction}
+              </span>
+              <span className="text-[11px] text-muted-foreground/50 group-hover:text-muted-foreground/70 transition-colors">
+                Quick prompt &rarr;
+              </span>
+            </div>
+
+            {/* Subtle Inner Glow on Hover */}
+            <div className="absolute inset-0 rounded-[16px] bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
           </Suggestion>
         </motion.div>
       ))}

@@ -49,7 +49,7 @@ const THEME_COLOR_SCRIPT = `\
   updateThemeColor();
 })();`;
 
-import { ConnectivityHandler } from "@/components/chat/connectivity-handler";
+import { ConnectivityHandler } from "@/components/connectivity-handler";
 
 export default function RootLayout({
   children,

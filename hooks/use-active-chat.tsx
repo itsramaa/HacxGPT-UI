@@ -18,10 +18,10 @@ import {
 } from "react";
 import useSWR, { useSWRConfig } from "swr";
 import { unstable_serialize } from "swr/infinite";
-import { useDataStream } from "@/components/chat/data-stream-provider";
-import { getChatHistoryPaginationKey } from "@/components/chat/sidebar-history";
-import { toast } from "@/components/chat/toast";
-import type { VisibilityType } from "@/components/chat/visibility-selector";
+import { useDataStream } from "@/components/data-stream-provider";
+import { getChatHistoryPaginationKey } from "@/hooks/use-history-portal";
+import { toast } from "@/components/toast";
+import type { VisibilityType } from "@/components/sidebar/visibility-selector";
 import { useAutoResume } from "@/hooks/use-auto-resume";
 import { DEFAULT_CHAT_MODEL } from "@/lib/ai/models";
 import { ChatbotError } from "@/lib/errors";
@@ -46,8 +46,6 @@ type ActiveChatContextValue = {
   currentModelId: string;
   setCurrentModelId: (id: string) => void;
   setPendingAttachmentIds: (ids: string[]) => void;
-  showSettings: boolean;
-  setShowSettings: Dispatch<SetStateAction<boolean>>;
   switchVersion: (parentId: string, version: number) => void;
   versions: Record<string, number>;
   handleRegenerate: (
@@ -287,14 +285,37 @@ export function ActiveChatProvider({
     onData: (dataPart) => {
       setDataStream((ds) => (ds ? [...ds, dataPart as any] : []));
 
-      // Real-time tool/usage update
+      // Real-time tool/usage/metadata update
       try {
         const part = dataPart as any;
         if (part?.tool_call) {
           setActiveTool(part.tool_call);
         }
-        if (part?.usage) {
-          // update local usage state if needed
+
+        // Capture metadata sent at the end of the stream
+        if (part?.message_id) {
+          setMessages((prev) => {
+            const lastMessage = prev.at(-1);
+            if (lastMessage && lastMessage.role === "assistant") {
+              return prev.map((m, idx) =>
+                idx === prev.length - 1
+                  ? {
+                    ...m,
+                    id: part.message_id,
+                    metadata: {
+                      ...m.metadata,
+                      parentId: part.parent_id,
+                      version: part.version,
+                      promptTokens: part.usage?.prompt_tokens,
+                      completionTokens: part.usage?.completion_tokens,
+                      totalTokens: part.usage?.total_tokens,
+                    },
+                  }
+                  : m
+              );
+            }
+            return prev;
+          });
         }
       } catch (_e) { }
     },
@@ -355,7 +376,6 @@ export function ActiveChatProvider({
     },
   });
 
-  const [showSettings, setShowSettings] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
   const handleRegenerate = useCallback(
@@ -582,8 +602,6 @@ export function ActiveChatProvider({
       currentModelId,
       setCurrentModelId,
       setPendingAttachmentIds,
-      showSettings,
-      setShowSettings,
       activeTool,
       setActiveTool,
       switchVersion,
@@ -611,16 +629,15 @@ export function ActiveChatProvider({
       isReadonly,
       isFetchingSession,
       currentModelId,
-      showSettings,
-      versionMap,
-      setCurrentModelId,
-      setPendingAttachmentIds,
+      activeTool,
       switchVersion,
+      versionMap,
       handleRegenerate,
       searchQuery,
       isGuest,
-      isModelAvailable, activeTool,
-      useSearch, setUseSearch
+      isModelAvailable,
+      useSearch,
+      setUseSearch,
     ]
   );
 

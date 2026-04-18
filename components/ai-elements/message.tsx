@@ -117,8 +117,6 @@ interface MessageBranchContextType {
   totalBranches: number;
   goToPrevious: () => void;
   goToNext: () => void;
-  branches: ReactElement[];
-  setBranches: (branches: ReactElement[]) => void;
 }
 
 const MessageBranchContext = createContext<MessageBranchContextType | null>(
@@ -138,18 +136,19 @@ const useMessageBranch = () => {
 };
 
 export type MessageBranchProps = HTMLAttributes<HTMLDivElement> & {
+  totalBranches?: number;
   defaultBranch?: number;
   onBranchChange?: (branchIndex: number) => void;
 };
 
 export const MessageBranch = ({
+  totalBranches = 1,
   defaultBranch = 0,
   onBranchChange,
   className,
   ...props
 }: MessageBranchProps) => {
   const [currentBranch, setCurrentBranch] = useState(defaultBranch);
-  const [branches, setBranches] = useState<ReactElement[]>([]);
 
   const handleBranchChange = useCallback(
     (newBranch: number) => {
@@ -161,26 +160,24 @@ export const MessageBranch = ({
 
   const goToPrevious = useCallback(() => {
     const newBranch =
-      currentBranch > 0 ? currentBranch - 1 : branches.length - 1;
+      currentBranch > 0 ? currentBranch - 1 : totalBranches - 1;
     handleBranchChange(newBranch);
-  }, [currentBranch, branches.length, handleBranchChange]);
+  }, [currentBranch, totalBranches, handleBranchChange]);
 
   const goToNext = useCallback(() => {
     const newBranch =
-      currentBranch < branches.length - 1 ? currentBranch + 1 : 0;
+      currentBranch < totalBranches - 1 ? currentBranch + 1 : 0;
     handleBranchChange(newBranch);
-  }, [currentBranch, branches.length, handleBranchChange]);
+  }, [currentBranch, totalBranches, handleBranchChange]);
 
   const contextValue = useMemo<MessageBranchContextType>(
     () => ({
-      branches,
       currentBranch,
       goToNext,
       goToPrevious,
-      setBranches,
-      totalBranches: branches.length,
+      totalBranches,
     }),
-    [branches, currentBranch, goToNext, goToPrevious]
+    [currentBranch, goToNext, goToPrevious, totalBranches]
   );
 
   return (
@@ -195,35 +192,33 @@ export const MessageBranch = ({
 
 export type MessageBranchContentProps = HTMLAttributes<HTMLDivElement>;
 
+import { motion, AnimatePresence } from "framer-motion";
+
 export const MessageBranchContent = ({
   children,
   ...props
 }: MessageBranchContentProps) => {
-  const { currentBranch, setBranches, branches } = useMessageBranch();
+  const { currentBranch } = useMessageBranch();
   const childrenArray = useMemo(
     () => (Array.isArray(children) ? children : [children]),
     [children]
   );
 
-  // Use useEffect to update branches when they change
-  useEffect(() => {
-    if (branches.length !== childrenArray.length) {
-      setBranches(childrenArray);
-    }
-  }, [childrenArray, branches, setBranches]);
-
-  return childrenArray.map((branch, index) => (
-    <div
-      className={cn(
-        "grid gap-2 overflow-hidden [&>div]:pb-0",
-        index === currentBranch ? "block" : "hidden"
-      )}
-      key={branch.key}
-      {...props}
-    >
-      {branch}
+  return (
+    <div className="relative overflow-hidden" {...props}>
+      <AnimatePresence initial={false} mode="wait">
+        <motion.div
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -10 }}
+          initial={{ opacity: 0, x: 10 }}
+          key={currentBranch}
+          transition={{ duration: 0.2, ease: "easeInOut" }}
+        >
+          {childrenArray[currentBranch]}
+        </motion.div>
+      </AnimatePresence>
     </div>
-  ));
+  );
 };
 
 export type MessageBranchSelectorProps = ComponentProps<typeof ButtonGroup>;

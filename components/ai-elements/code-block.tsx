@@ -3,8 +3,6 @@
 import type { ComponentProps, CSSProperties, HTMLAttributes } from "react";
 import type {
   BundledLanguage,
-  BundledTheme,
-  HighlighterGeneric,
   ThemedToken,
 } from "shiki";
 
@@ -28,7 +26,6 @@ import {
   useRef,
   useState,
 } from "react";
-import { createHighlighter } from "shiki";
 
 // Shiki uses bitflags for font styles: 1=italic, 2=bold, 4=underline
 // biome-ignore lint/suspicious/noBitwiseOperators: shiki bitflag check
@@ -93,8 +90,8 @@ const LineSpan = ({
     {keyedLine.tokens.length === 0
       ? "\n"
       : keyedLine.tokens.map(({ token, key }) => (
-          <TokenSpan key={key} token={token} />
-        ))}
+        <TokenSpan key={key} token={token} />
+      ))}
   </span>
 );
 
@@ -120,135 +117,7 @@ const CodeBlockContext = createContext<CodeBlockContextType>({
   code: "",
 });
 
-// Highlighter cache (singleton per language)
-const highlighterCache = new Map<
-  string,
-  Promise<HighlighterGeneric<BundledLanguage, BundledTheme>>
->();
-
-// Token cache
-const tokensCache = new Map<string, TokenizedCode>();
-
-// Subscribers for async token updates
-const subscribers = new Map<string, Set<(result: TokenizedCode) => void>>();
-
-const getTokensCacheKey = (code: string, language: BundledLanguage) => {
-  const start = code.slice(0, 100);
-  const end = code.length > 100 ? code.slice(-100) : "";
-  return `${language}:${code.length}:${start}:${end}`;
-};
-
-// Map specific languages to bundled ones if they are missing or similar
-const LANGUAGE_MAP: Record<string, BundledLanguage> = {
-  proguard: "java",
-};
-
-const getHighlighter = (
-  language: BundledLanguage
-): Promise<HighlighterGeneric<BundledLanguage, BundledTheme>> => {
-  const targetLang = LANGUAGE_MAP[language as string] || language;
-  const cached = highlighterCache.get(targetLang);
-  if (cached) {
-    return cached;
-  }
-
-  const highlighterPromise = createHighlighter({
-    langs: [targetLang],
-    themes: ["github-light", "github-dark"],
-  }).catch((err) => {
-    // If language load fails, fallback to a minimal highlighter with plain text
-    console.warn(`Shiki failed to load ${targetLang}, falling back to text:`, err);
-    return createHighlighter({
-      langs: ["text"],
-      themes: ["github-light", "github-dark"],
-    });
-  });
-
-  highlighterCache.set(targetLang, highlighterPromise);
-  return highlighterPromise;
-};
-
-// Create raw tokens for immediate display while highlighting loads
-const createRawTokens = (code: string): TokenizedCode => ({
-  bg: "transparent",
-  fg: "inherit",
-  tokens: code.split("\n").map((line) =>
-    line === ""
-      ? []
-      : [
-          {
-            color: "inherit",
-            content: line,
-          } as ThemedToken,
-        ]
-  ),
-});
-
-// Synchronous highlight with callback for async results
-export const highlightCode = (
-  code: string,
-  language: BundledLanguage,
-  // oxlint-disable-next-line eslint-plugin-promise(prefer-await-to-callbacks)
-  callback?: (result: TokenizedCode) => void
-): TokenizedCode | null => {
-  const tokensCacheKey = getTokensCacheKey(code, language);
-
-  // Return cached result if available
-  const cached = tokensCache.get(tokensCacheKey);
-  if (cached) {
-    return cached;
-  }
-
-  // Subscribe callback if provided
-  if (callback) {
-    if (!subscribers.has(tokensCacheKey)) {
-      subscribers.set(tokensCacheKey, new Set());
-    }
-    subscribers.get(tokensCacheKey)?.add(callback);
-  }
-
-  // Start highlighting in background - fire-and-forget async pattern
-  getHighlighter(language)
-    // oxlint-disable-next-line eslint-plugin-promise(prefer-await-to-then)
-    .then((highlighter) => {
-      const targetLang = LANGUAGE_MAP[language as string] || language;
-      const availableLangs = highlighter.getLoadedLanguages();
-      const langToUse = availableLangs.includes(targetLang) ? targetLang : "text";
-
-      const result = highlighter.codeToTokens(code, {
-        lang: langToUse,
-        themes: {
-          dark: "github-dark",
-          light: "github-light",
-        },
-      });
-
-      const tokenized: TokenizedCode = {
-        bg: result.bg ?? "transparent",
-        fg: result.fg ?? "inherit",
-        tokens: result.tokens,
-      };
-
-      // Cache the result
-      tokensCache.set(tokensCacheKey, tokenized);
-
-      // Notify all subscribers
-      const subs = subscribers.get(tokensCacheKey);
-      if (subs) {
-        for (const sub of subs) {
-          sub(tokenized);
-        }
-        subscribers.delete(tokensCacheKey);
-      }
-    })
-    // oxlint-disable-next-line eslint-plugin-promise(prefer-await-to-then), eslint-plugin-promise(prefer-await-to-callbacks)
-    .catch((error) => {
-      console.error("Failed to highlight code:", error);
-      subscribers.delete(tokensCacheKey);
-    });
-
-  return null;
-};
+import { useHighlighter } from "@/hooks/use-highlighter";
 
 // Line number styles using CSS counters
 const LINE_NUMBER_CLASSES = cn(
@@ -270,7 +139,7 @@ const CodeBlockBody = memo(
     showLineNumbers,
     className,
   }: {
-    tokenized: TokenizedCode;
+    tokenized: any;
     showLineNumbers: boolean;
     className?: string;
   }) => {
@@ -399,31 +268,7 @@ export const CodeBlockContent = ({
   language: BundledLanguage;
   showLineNumbers?: boolean;
 }) => {
-  // Memoized raw tokens for immediate display
-  const rawTokens = useMemo(() => createRawTokens(code), [code]);
-
-  // Try to get cached result synchronously, otherwise use raw tokens
-  const [tokenized, setTokenized] = useState<TokenizedCode>(
-    () => highlightCode(code, language) ?? rawTokens
-  );
-
-  useEffect(() => {
-    let cancelled = false;
-
-    // Reset to raw tokens when code changes (shows current code, not stale tokens)
-    setTokenized(highlightCode(code, language) ?? rawTokens);
-
-    // Subscribe to async highlighting result
-    highlightCode(code, language, (result) => {
-      if (!cancelled) {
-        setTokenized(result);
-      }
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [code, language, rawTokens]);
+  const tokenized = useHighlighter(code, language);
 
   return (
     <div className="relative overflow-auto">
@@ -462,6 +307,8 @@ export type CodeBlockCopyButtonProps = ComponentProps<typeof Button> & {
   timeout?: number;
 };
 
+import { toast } from "sonner";
+
 export const CodeBlockCopyButton = ({
   onCopy,
   onError,
@@ -476,6 +323,7 @@ export const CodeBlockCopyButton = ({
 
   const copyToClipboard = useCallback(async () => {
     if (typeof window === "undefined" || !navigator?.clipboard?.writeText) {
+      toast.error("Clipboard API not available");
       onError?.(new Error("Clipboard API not available"));
       return;
     }
@@ -484,6 +332,7 @@ export const CodeBlockCopyButton = ({
       if (!isCopied) {
         await navigator.clipboard.writeText(code);
         setIsCopied(true);
+        toast.success("Code copied to clipboard");
         onCopy?.();
         timeoutRef.current = window.setTimeout(
           () => setIsCopied(false),
@@ -491,6 +340,7 @@ export const CodeBlockCopyButton = ({
         );
       }
     } catch (error) {
+      toast.error("Failed to copy code");
       onError?.(error as Error);
     }
   }, [code, onCopy, onError, timeout, isCopied]);

@@ -38,6 +38,7 @@ export async function POST(request: Request) {
       url: `${BACKEND_URL}${data.url}`,
       pathname: data.filename,
       contentType: data.content_type,
+      size: data.file_size,
     });
   } catch (error) {
     if (error instanceof ChatbotError) {

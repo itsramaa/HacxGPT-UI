@@ -9,7 +9,7 @@ import {
   Trash2Icon,
   XIcon,
 } from "lucide-react";
-import { type ReactNode, useEffect, useRef } from "react";
+import { type ReactNode, useEffect, useMemo, useRef } from "react";
 import { cn } from "@/lib/utils";
 
 export type SlashCommand = {
@@ -79,8 +79,11 @@ export function SlashCommandMenu({
   selectedIndex,
 }: SlashCommandMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
-  const filtered = slashCommands.filter((cmd) =>
-    cmd.name.startsWith(query.toLowerCase())
+
+  const filtered = useMemo(
+    () =>
+      slashCommands.filter((cmd) => cmd.name.startsWith(query.toLowerCase())),
+    [query]
   );
 
   useEffect(() => {

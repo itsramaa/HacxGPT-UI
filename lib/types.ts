@@ -56,7 +56,8 @@ export const backendUserSchema = z.object({
   role: z.string(),
   is_active: z.boolean(),
   language_preference: z.string().optional(),
-  created_at: z.string(),
+  total_usage: z.number().optional(),
+  created_at: z.string().nullable(),
 });
 
 export const backendSessionSchema = z.object({
@@ -66,8 +67,8 @@ export const backendSessionSchema = z.object({
   provider_id: z.string().uuid(),
   model_name: z.string(),
   is_active: z.boolean(),
-  created_at: z.string(),
-  updated_at: z.string(),
+  created_at: z.string().nullable(),
+  updated_at: z.string().nullable(),
 });
 
 export const backendMessageSchema = z.object({
@@ -77,7 +78,7 @@ export const backendMessageSchema = z.object({
   prompt_tokens: z.number().nullable(),
   completion_tokens: z.number().nullable(),
   total_tokens: z.number().nullable(),
-  created_at: z.string(),
+  created_at: z.string().nullable(),
   parent_id: z.string().uuid().nullable().optional(),
   version: z.number().default(1),
 });
@@ -88,7 +89,7 @@ export const backendAttachmentSchema = z.object({
   content_type: z.string(),
   file_size: z.number(),
   url: z.string().nullable(),
-  created_at: z.string(),
+  created_at: z.string().nullable(),
 });
 
 export const backendModelSchema = z.object({
@@ -115,8 +116,8 @@ export const backendApiKeySchema = z.object({
   is_active: z.boolean(),
   last_error: z.string().nullable(),
   last_used_at: z.string().nullable(),
-  created_at: z.string(),
-  updated_at: z.string(),
+  created_at: z.string().nullable(),
+  updated_at: z.string().nullable(),
 });
 
 // --- Raw Backend Response Types ---

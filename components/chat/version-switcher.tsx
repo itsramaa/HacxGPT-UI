@@ -2,6 +2,7 @@
 
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 interface VersionSwitcherProps {
   current: number;
@@ -18,11 +19,16 @@ export function VersionSwitcher({
   onNext,
   className = "",
 }: VersionSwitcherProps) {
-  if (total <= 1) { return null; }
+  if (total <= 1) {
+    return null;
+  }
 
   return (
     <div
-      className={`flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground/60 select-none ${className}`}
+      className={cn(
+        "flex items-center gap-1 text-[10px] font-bold text-muted-foreground/50 select-none",
+        className
+      )}
     >
       <Button
         className="h-5 w-5 hover:bg-black/5 dark:hover:bg-white/5 rounded-md"
@@ -31,10 +37,10 @@ export function VersionSwitcher({
         size="icon"
         variant="ghost"
       >
-        <ChevronLeftIcon size={12} />
+        <ChevronLeftIcon size={10} />
       </Button>
 
-      <span className="min-w-[24px] text-center tracking-tighter">
+      <span className="min-w-[28px] text-center tracking-tight">
         {current} / {total}
       </span>
 
@@ -45,7 +51,7 @@ export function VersionSwitcher({
         size="icon"
         variant="ghost"
       >
-        <ChevronRightIcon size={12} />
+        <ChevronRightIcon size={10} />
       </Button>
     </div>
   );

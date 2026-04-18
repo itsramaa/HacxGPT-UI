@@ -1,9 +1,9 @@
 import NextAuth, { type DefaultSession } from "next-auth";
 import type { DefaultJWT } from "next-auth/jwt";
 import Credentials from "next-auth/providers/credentials";
-import { publicFetch } from "@/lib/api";
+import { publicFetch, BACKEND_URL } from "@/lib/api";
 import { setAccessToken } from "@/lib/auth-token";
-import { authConfig } from "./auth.config";
+import { authConfig } from "../../lib/auth/auth.config";
 
 declare module "next-auth" {
   interface Session extends DefaultSession {
@@ -74,10 +74,9 @@ export const {
           await setAccessToken(token);
 
           // 3. Fetch the user profile to populate the session
-          const profileRes = await fetch(
-            `${process.env.BACKEND_API_URL || "http://127.0.0.1:8000"}/api/auth/me`,
-            { headers: { Authorization: `Bearer ${token}` } }
-          );
+          const profileRes = await fetch(`${BACKEND_URL}/api/auth/me`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
 
           if (!profileRes.ok) { return null; }
           const profile = await profileRes.json();

@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import NextAuth from "next-auth";
-import { authConfig } from "./app/(auth)/auth.config";
+import { authConfig } from "./lib/auth/auth.config";
 import { TOKEN_COOKIE_NAME } from "./lib/auth-token";
 
 const { auth } = NextAuth(authConfig);

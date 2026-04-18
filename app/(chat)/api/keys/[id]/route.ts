@@ -1,17 +1,28 @@
 import type { NextRequest } from "next/server";
 import { backendFetch } from "@/lib/api";
 import { ChatbotError } from "@/lib/errors";
+import { keyUpdateSchema } from "../schema";
 
+/**
+ * PATCH /api/keys/[id]
+ * Updates a specific API key.
+ */
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
-    const body = await request.json();
+    const json = await request.json();
+    const result = keyUpdateSchema.safeParse(json);
+
+    if (!result.success) {
+      return Response.json({ error: "Invalid update data", details: result.error.format() }, { status: 400 });
+    }
+
     const res = await backendFetch(`/api/keys/${id}`, {
       method: "PATCH",
-      body: JSON.stringify(body),
+      body: JSON.stringify(result.data),
       rawOnError: true,
     });
 
@@ -22,6 +33,10 @@ export async function PATCH(
   }
 }
 
+/**
+ * DELETE /api/keys/[id]
+ * Deletes a specific API key.
+ */
 export async function DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -34,29 +49,17 @@ export async function DELETE(
     });
 
     if (!res.ok) {
-      try {
-        return Response.json(await res.json(), { status: res.status });
-      } catch (_e) {
-        return Response.json(
-          { error: "Failed to delete key" },
-          { status: res.status }
-        );
-      }
+      const errorData = await res.json().catch(() => ({ error: "Failed to delete key" }));
+      return Response.json(errorData, { status: res.status });
     }
 
     return Response.json({ message: "deleted" });
   } catch (err) {
     if (err instanceof ChatbotError) { return err.toResponse(); }
-    console.error("Error deleting key:", err);
     return new ChatbotError("offline:chat").toResponse();
   }
 }
 
-export async function GET(
-  _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  // We don't have a direct get single key in backend api usually,
-  // but we can proxy it if needed.
+export async function GET() {
   return Response.json({ error: "Method not allowed" }, { status: 405 });
 }

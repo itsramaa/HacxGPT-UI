@@ -52,8 +52,7 @@ export type ReasoningProps = ComponentProps<typeof Collapsible> & {
   duration?: number;
 };
 
-const AUTO_CLOSE_DELAY = 1000;
-const MS_IN_S = 1000;
+import { useReasoningState } from "@/hooks/use-reasoning-state";
 
 export const Reasoning = memo(
   ({
@@ -66,67 +65,13 @@ export const Reasoning = memo(
     children,
     ...props
   }: ReasoningProps) => {
-    const resolvedDefaultOpen = defaultOpen ?? isStreaming;
-    // Track if defaultOpen was explicitly set to false (to prevent auto-open)
-    const isExplicitlyClosed = defaultOpen === false;
-
-    const [isOpen, setIsOpen] = useControllableState<boolean>({
-      defaultProp: resolvedDefaultOpen,
-      onChange: onOpenChange,
-      prop: open,
+    const { duration, isOpen, setIsOpen, handleOpenChange } = useReasoningState({
+      defaultOpen,
+      duration: durationProp,
+      isStreaming,
+      onOpenChange,
+      open,
     });
-    const [duration, setDuration] = useControllableState<number | undefined>({
-      defaultProp: undefined,
-      prop: durationProp,
-    });
-
-    const hasEverStreamedRef = useRef(isStreaming);
-    const [hasAutoClosed, setHasAutoClosed] = useState(false);
-    const startTimeRef = useRef<number | null>(null);
-
-    // Track when streaming starts and compute duration
-    useEffect(() => {
-      if (isStreaming) {
-        hasEverStreamedRef.current = true;
-        if (startTimeRef.current === null) {
-          startTimeRef.current = Date.now();
-        }
-      } else if (startTimeRef.current !== null) {
-        setDuration(Math.ceil((Date.now() - startTimeRef.current) / MS_IN_S));
-        startTimeRef.current = null;
-      }
-    }, [isStreaming, setDuration]);
-
-    // Auto-open when streaming starts (unless explicitly closed)
-    useEffect(() => {
-      if (isStreaming && !isOpen && !isExplicitlyClosed) {
-        setIsOpen(true);
-      }
-    }, [isStreaming, isOpen, setIsOpen, isExplicitlyClosed]);
-
-    // Auto-close when streaming ends (once only, and only if it ever streamed)
-    useEffect(() => {
-      if (
-        hasEverStreamedRef.current &&
-        !isStreaming &&
-        isOpen &&
-        !hasAutoClosed
-      ) {
-        const timer = setTimeout(() => {
-          setIsOpen(false);
-          setHasAutoClosed(true);
-        }, AUTO_CLOSE_DELAY);
-
-        return () => clearTimeout(timer);
-      }
-    }, [isStreaming, isOpen, setIsOpen, hasAutoClosed]);
-
-    const handleOpenChange = useCallback(
-      (newOpen: boolean) => {
-        setIsOpen(newOpen);
-      },
-      [setIsOpen]
-    );
 
     const contextValue = useMemo(
       () => ({ duration, isOpen, isStreaming, setIsOpen }),
@@ -218,16 +163,26 @@ export const ReasoningContent = memo(
     return (
       <div
         className={cn(
-          "mt-2 animate-in fade-in-0 duration-200 text-muted-foreground/60 [overflow-anchor:none]",
+          "mt-3 animate-in fade-in-0 slide-in-from-top-1 duration-200 [overflow-anchor:none]",
           className
         )}
       >
         <div
-          className="max-h-[200px] overflow-y-auto rounded-lg border border-border/20 bg-muted/10 px-3 py-2 text-xs leading-relaxed"
+          className={cn(
+            "relative max-h-[300px] overflow-y-auto rounded-xl border border-border/40 px-4 py-3 text-[13px] leading-relaxed transition-all duration-300",
+            "bg-muted/10 backdrop-blur-md dark:bg-muted/5",
+            "shadow-[0_2px_12px_-4px_rgba(0,0,0,0.05)] dark:shadow-[0_4px_16px_-8px_rgba(0,0,0,0.3)]",
+            isStreaming && "border-indigo-500/30 bg-indigo-500/[0.02] ring-1 ring-indigo-500/10"
+          )}
           ref={scrollRef}
           style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
         >
-          <Streamdown plugins={streamdownPlugins} {...props}>
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-indigo-500/20 to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
+          <Streamdown
+            className="text-muted-foreground/80 dark:text-muted-foreground/60"
+            plugins={streamdownPlugins}
+            {...props}
+          >
             {children}
           </Streamdown>
         </div>

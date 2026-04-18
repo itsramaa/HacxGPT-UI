@@ -21,14 +21,14 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const backendSessions = await backendJSON<any[]>("/api/sessions");
+    const backendSessions = await backendJSON<any[]>("/api/sessions?size=200");
 
     // Map backend SessionResponse → UI Chat format
     const mappedChats: Chat[] = backendSessions
       .map((s) => ({
         id: s.id,
         title: s.title || "New Chat",
-        createdAt: new Date(s.created_at),
+        createdAt: s.created_at ? new Date(s.created_at) : new Date(),
         userId: s.user_id,
         visibility: "private" as const,
       }))
@@ -61,15 +61,15 @@ export async function GET(request: NextRequest) {
 
 export async function DELETE() {
   try {
-    const sessions = await backendJSON<any[]>("/api/sessions");
-    await Promise.all(
-      sessions.map((s) =>
-        backendFetch(`/api/sessions/${s.id}`, {
-          method: "DELETE",
-          rawOnError: true,
-        })
-      )
-    );
+    const res = await backendFetch("/api/sessions", {
+      method: "DELETE",
+      rawOnError: true,
+    });
+
+    if (!res.ok) {
+      return new ChatbotError("offline:chat").toResponse();
+    }
+
     return Response.json("ok", { status: 200 });
   } catch (err) {
     if (err instanceof ChatbotError) { return err.toResponse(); }

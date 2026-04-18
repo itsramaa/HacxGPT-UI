@@ -7,8 +7,8 @@
  */
 
 import { NextResponse } from "next/server";
-import { signOut } from "@/app/(auth)/auth";
-import { clearAccessToken } from "@/lib/auth-token";
+import { signOut } from "@/lib/auth/auth";
+import { clearAccessToken } from "@/lib/auth/auth-token";
 
 export async function POST(): Promise<NextResponse> {
   // 1. Clear the JWT HTTP-only cookie

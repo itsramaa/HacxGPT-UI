@@ -128,3 +128,11 @@ export function getTextFromMessage(message: ChatMessage | UIMessage): string {
     .map((part) => (part as { type: "text"; text: string }).text)
     .join("");
 }
+
+export function emailToHue(email: string): number {
+  let hash = 0;
+  for (const char of email || "") {
+    hash = char.charCodeAt(0) + ((hash << 5) - hash);
+  }
+  return Math.abs(hash) % 360;
+}
