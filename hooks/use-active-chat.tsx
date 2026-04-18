@@ -60,6 +60,8 @@ type ActiveChatContextValue = {
   isModelAvailable: boolean;
   useSearch: boolean;
   setUseSearch: Dispatch<SetStateAction<boolean>>;
+  error: string | null;
+  setError: Dispatch<SetStateAction<string | null>>;
 };
 
 const ActiveChatContext = createContext<ActiveChatContextValue | null>(null);
@@ -83,16 +85,15 @@ export function ActiveChatProvider({
 
   const chatIdFromUrl = extractChatId(pathname);
   const isNewChat = !chatIdFromUrl;
-  const newChatIdRef = useRef(generateUUID());
+  const [newChatId, setNewChatId] = useState(() => generateUUID());
   const prevPathnameRef = useRef(pathname);
 
-  const chatId = chatIdFromUrl ?? newChatIdRef.current;
+  const chatId = chatIdFromUrl ?? newChatId;
 
-  // Regenerate UUID for new chats when pathname changes — must be in useEffect
-  // to avoid side-effects during render (which fire twice in React Strict Mode)
+  // Regenerate UUID for new chats when pathname changes
   useEffect(() => {
     if (isNewChat && prevPathnameRef.current !== pathname) {
-      newChatIdRef.current = generateUUID();
+      setNewChatId(generateUUID());
     }
     prevPathnameRef.current = pathname;
   }, [pathname, isNewChat]);
@@ -184,6 +185,7 @@ export function ActiveChatProvider({
   const [versionMap, setVersionMap] = useState<Record<string, number>>({});
   const [activeTool, setActiveTool] = useState<string | null>(null);
   const [useSearch, setUseSearch] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (chatData?.activeVersions) {
@@ -236,7 +238,7 @@ export function ActiveChatProvider({
 
         // If we got an ID and we were in "New Chat" mode, update the URL
         if (actualId && (actualId !== chatId || isNewChat)) {
-          newChatIdRef.current = actualId;
+          setNewChatId(actualId);
           // Use router.replace to update the URL without losing state
           router.replace(
             `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/chat/${actualId}`
@@ -267,7 +269,7 @@ export function ActiveChatProvider({
 
         return {
           body: {
-            id: chatIdFromUrl ?? newChatIdRef.current,
+            id: chatId,
             ...(isToolApprovalContinuation
               ? { messages: request.messages }
               : { message: lastMessage }),
@@ -290,6 +292,12 @@ export function ActiveChatProvider({
         const part = dataPart as any;
         if (part?.tool_call) {
           setActiveTool(part.tool_call);
+        }
+
+        if (part?.error) {
+          setError(part.error);
+          toast({ type: "error", description: part.error });
+          stop();
         }
 
         // Capture metadata sent at the end of the stream
@@ -449,12 +457,12 @@ export function ActiveChatProvider({
 
   const loadedChatIds = useRef(new Set<string>());
 
-  if (isNewChat && !loadedChatIds.current.has(newChatIdRef.current)) {
-    loadedChatIds.current.add(newChatIdRef.current);
+  if (isNewChat && !loadedChatIds.current.has(newChatId)) {
+    loadedChatIds.current.add(newChatId);
   }
 
   useEffect(() => {
-    if (loadedChatIds.current.has(chatId)) {
+    if (loadedChatIds.current.has(chatId) && messages.length > 0) {
       return;
     }
     // Only overwrite if we have new messages from the server, 
@@ -467,17 +475,35 @@ export function ActiveChatProvider({
         setMessages(chatData.messages);
       }
     }
-  }, [chatId, chatData?.messages, isLoading, setMessages]);
+  }, [chatId, chatData?.messages, isLoading, setMessages, messages]);
 
   const prevChatIdRef = useRef(chatId);
   useEffect(() => {
     if (prevChatIdRef.current !== chatId) {
+      const prevId = prevChatIdRef.current;
       prevChatIdRef.current = chatId;
-      if (isNewChat) {
-        setMessages([]);
+
+      // Detect "Realization" transition: 
+      // from generating/new chat placeholder to its permanent ID.
+      // We don't want to clear messages if we just sent the first message.
+      const isFromNewChat = !extractChatId(prevPathnameRef.current);
+      const isToExistingChat = !isNewChat;
+
+      if (isFromNewChat && isToExistingChat) {
+        // Just realizing a new chat, keep messages
+        return;
       }
+
+      // Always clear local state when switching between different EXISTING chats
+      // or going back to the New Chat page.
+      setMessages([]);
+      setDataStream([]);
+      setInput("");
+      setError(null);
+      setVersionMap({});
+      setActiveTool(null);
     }
-  }, [chatId, isNewChat, setMessages]);
+  }, [chatId, setMessages, setDataStream, setInput, setVersionMap, setActiveTool, isNewChat]);
 
   const hasInitializedModel = useRef<string | null>(null);
 
@@ -520,6 +546,7 @@ export function ActiveChatProvider({
     setMessages,
   });
 
+  // --- Readonly & Loading Logic ---
   const isReadonly = isNewChat ? false : (chatData?.isReadonly ?? false);
 
   // --- Filtering Branched Messages ---
@@ -595,6 +622,8 @@ export function ActiveChatProvider({
       isModelAvailable,
       useSearch,
       setUseSearch,
+      error,
+      setError,
     }),
     [
       chatId,

@@ -37,7 +37,6 @@ import { AttachmentsButton } from "./multimodal-input/attachments-button";
 import { ModelSelectorCompact } from "./multimodal-input/model-selector-compact";
 import { ApiKeySelectorCompact } from "./multimodal-input/api-key-selector-compact";
 import { SearchButton } from "./multimodal-input/search-button";
-import { StopButton } from "./multimodal-input/stop-button";
 
 function PureMultimodalInput({
   chatId,
@@ -103,6 +102,8 @@ function PureMultimodalInput({
     editingMessage,
     status,
   });
+
+  const isGenerating = status === "submitted" || status === "streaming";
 
   const hasAutoFocused = useRef(false);
   useEffect(() => {
@@ -243,6 +244,7 @@ function PureMultimodalInput({
           placeholder={editingMessage ? "Edit your message..." : "Ask anything..."}
           ref={textareaRef}
           value={input}
+          disabled={isGenerating || isUploading}
         />
         <PromptInputFooter className="px-3 pb-3">
           <PromptInputTools>
@@ -269,28 +271,25 @@ function PureMultimodalInput({
             </div>
           </PromptInputTools>
 
-          {status === "submitted" || isUploading ? (
-            <StopButton setMessages={setMessages} stop={stop} />
-          ) : (
-            <PromptInputSubmit
-              className={cn(
-                "h-7 w-7 rounded-xl transition-all duration-200",
-                (input.trim() || attachments.length > 0) && isModelAvailable
-                  ? "bg-foreground text-background hover:opacity-90 active:scale-95 shadow-sm"
-                  : "bg-muted text-muted-foreground/25 cursor-not-allowed"
-              )}
-              data-testid="send-button"
-              disabled={
-                (!input.trim() && attachments.length === 0) ||
-                isUploading ||
-                !isModelAvailable
-              }
-              status={status}
-              variant="secondary"
-            >
-              <ArrowUpIcon className="size-4" strokeWidth={2.5} />
-            </PromptInputSubmit>
-          )}
+          <PromptInputSubmit
+            className={cn(
+              "h-7 w-7 rounded-xl transition-all duration-200",
+              (input.trim() || attachments.length > 0 || isGenerating) && isModelAvailable
+                ? "bg-foreground text-background dark:hover:bg-gray-400 hover:bg-gray-500 active:scale-95 shadow-sm"
+                : "bg-muted text-muted-foreground/25"
+            )}
+            data-testid="send-button"
+            disabled={
+              (!input.trim() && attachments.length === 0 && !isGenerating) ||
+              isUploading ||
+              !isModelAvailable
+            }
+            onStop={stop}
+            status={status}
+            variant="secondary"
+          >
+            <ArrowUpIcon className="size-4" strokeWidth={2.5} />
+          </PromptInputSubmit>
         </PromptInputFooter>
       </PromptInput>
     </div>

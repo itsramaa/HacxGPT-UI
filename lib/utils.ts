@@ -35,7 +35,7 @@ export const fetcher = async (url: string) => {
       }
       throw new ChatbotError(
         data?.code as ErrorCode,
-        data?.cause || `HTTP ${response.status}: ${response.statusText}`
+        data?.cause || data?.detail || `HTTP ${response.status}: ${response.statusText}`
       );
     }
 
@@ -61,8 +61,8 @@ export async function fetchWithErrorHandlers(
         dispatchOfflineEvent();
       }
       throw new ChatbotError(
-        data?.code as ErrorCode, 
-        data?.cause || `HTTP ${response.status}: ${response.statusText}`
+        data?.code as ErrorCode,
+        data?.cause || data?.detail || `HTTP ${response.status}: ${response.statusText}`
       );
     }
 

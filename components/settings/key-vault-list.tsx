@@ -290,7 +290,7 @@ export function KeyVaultList({
                     {k.is_active ? "• OPERATIONAL" : "• STANDBY"}
                   </span>
                   {k.last_error && (
-                    <span className="text-[9px] text-red-400/60 max-w-[120px] truncate">
+                    <span className="text-[9px] text-red-400 font-medium">
                       {k.last_error}
                     </span>
                   )}
