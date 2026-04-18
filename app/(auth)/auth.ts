@@ -11,6 +11,7 @@ declare module "next-auth" {
       id: string;
       accessToken?: string;
       total_usage?: number;
+      role?: string;
     } & DefaultSession["user"];
   }
 
@@ -19,6 +20,7 @@ declare module "next-auth" {
     email?: string | null;
     accessToken?: string;
     total_usage?: number;
+    role?: string;
   }
 }
 
@@ -27,6 +29,7 @@ declare module "next-auth/jwt" {
     id: string;
     accessToken?: string;
     total_usage?: number;
+    role?: string;
     /** Unix timestamp (ms) when the access token expires */
     accessTokenExpiresAt?: number;
   }
@@ -86,6 +89,7 @@ export const {
             email: profile.username,
             accessToken: token,
             total_usage: profile.total_usage,
+            role: profile.role,
           };
         } catch (e) {
           console.error("Auth backend error:", e);
@@ -103,6 +107,7 @@ export const {
         token.id = user.id as string;
         token.accessToken = user.accessToken;
         token.total_usage = user.total_usage;
+        token.role = user.role;
         // Record when this token should be considered stale
         token.accessTokenExpiresAt = user.accessToken
           ? Date.now() + ACCESS_TOKEN_TTL_MS
@@ -120,6 +125,7 @@ export const {
         // it is NOT sent to the browser (the cookie handles that).
         session.user.accessToken = token.accessToken as string | undefined;
         session.user.total_usage = token.total_usage as number | undefined;
+        session.user.role = token.role as string | undefined;
       }
 
       return session;
