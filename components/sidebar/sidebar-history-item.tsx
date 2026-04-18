@@ -21,14 +21,15 @@ const PureChatItem = ({
   chat,
   isActive,
   onDelete,
+  onRename,
   setOpenMobile,
 }: {
   chat: Chat;
   isActive: boolean;
   onDelete: (chatId: string) => void;
+  onRename: (chatId: string, title: string) => Promise<boolean>;
   setOpenMobile: (open: boolean) => void;
 }) => {
-  const { renameChat } = useHistoryPortal(null);
   const [isEditing, setIsEditing] = useState(false);
   const [newTitle, setNewTitle] = useState(chat.title);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -51,7 +52,8 @@ const PureChatItem = ({
       return;
     }
 
-    await renameChat(chat.id, newTitle.trim(), () => setIsEditing(false));
+    await onRename(chat.id, newTitle.trim());
+    setIsEditing(false);
   };
 
   return (

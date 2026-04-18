@@ -1,6 +1,6 @@
 import { type ChatModel, chatModels } from "@/lib/ai/models";
 import { publicFetch } from "@/lib/api";
-import { getAccessToken } from "@/lib/auth-token";
+import { getAccessToken } from "@/lib/auth/auth-token";
 
 const cacheHeaders = { "Cache-Control": "no-cache, must-revalidate" };
 

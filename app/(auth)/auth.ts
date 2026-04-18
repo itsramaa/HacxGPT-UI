@@ -2,7 +2,7 @@ import NextAuth, { type DefaultSession } from "next-auth";
 import type { DefaultJWT } from "next-auth/jwt";
 import Credentials from "next-auth/providers/credentials";
 import { publicFetch, BACKEND_URL } from "@/lib/api";
-import { setAccessToken } from "@/lib/auth-token";
+import { setAccessToken } from "@/lib/auth/auth-token";
 import { authConfig } from "../../lib/auth/auth.config";
 
 declare module "next-auth" {

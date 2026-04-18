@@ -54,8 +54,8 @@ export function AppSidebar({ user }: { user: User | undefined }) {
 
   return (
     <>
-      <Sidebar collapsible="icon">
-        <SidebarHeader className="sticky top-0 z-30 bg-sidebar/95 backdrop-blur-md pb-2 pt-3 shadow-[0_1px_0_0_rgba(255,255,255,0.05)]">
+      <Sidebar collapsible="icon" className="h-full flex flex-col">
+        <SidebarHeader className="shrink-0 sticky top-0 z-30 bg-sidebar/95 backdrop-blur-md pb-2 pt-3 border-b border-sidebar-border/30">
           <SidebarMenu>
             <SidebarMenuItem className="flex flex-row items-center justify-between">
               <div className="group/logo relative flex items-center justify-center">
@@ -121,7 +121,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
             )}
           </SidebarMenu>
         </SidebarHeader>
-        <SidebarContent className="gap-0 border-r border-sidebar-border/50">
+        <SidebarContent className="gap-0 border-r border-sidebar-border/50 flex-1 overflow-y-auto">
           {!isAdminPage && (
             <>
               <SidebarGroup className="px-1 pr-2 pt-0">
@@ -137,7 +137,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
 
           {isAdminPage && <SidebarAdmin />}
         </SidebarContent>
-        <SidebarFooter className="border-t border-r border-sidebar-border/50 bg-sidebar-accent/5 p-2">
+        <SidebarFooter className="border-t border-r border-sidebar-border/50 bg-sidebar-accent/5 p-2 shrink-0">
           {user && <SidebarUserNav user={user} />}
           <div className="px-2 py-1 text-[10px] text-sidebar-foreground/30 flex items-center justify-between group-data-[collapsible=icon]:hidden">
             <span>© 2026 Holycan</span>
@@ -152,10 +152,10 @@ export function AppSidebar({ user }: { user: User | undefined }) {
       <SidebarHistoryDialogs
         confirmDeleteAllOpen={showDeleteAllDialog}
         confirmDeleteOpen={false}
-        onExecuteDelete={async () => {}}
+        onExecuteDelete={async () => { }}
         onExecuteDeleteAll={handleDeleteAll}
         setConfirmDeleteAllOpen={setShowDeleteAllDialog}
-        setConfirmDeleteOpen={() => {}}
+        setConfirmDeleteOpen={() => { }}
       />
     </>
   );

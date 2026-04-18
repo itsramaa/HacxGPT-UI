@@ -4,19 +4,20 @@ import type { NextConfig } from "next";
 const basePath = process.env.IS_DEMO === "1" ? "/demo" : "";
 
 const nextConfig: NextConfig = {
+  allowedDevOrigins: ['192.168.0.110'],
   ...(basePath
     ? {
-        basePath,
-        assetPrefix: "/demo-assets",
-        redirects: async () => [
-          {
-            source: "/",
-            destination: basePath,
-            permanent: false,
-            basePath: false,
-          },
-        ],
-      }
+      basePath,
+      assetPrefix: "/demo-assets",
+      redirects: async () => [
+        {
+          source: "/",
+          destination: basePath,
+          permanent: false,
+          basePath: false,
+        },
+      ],
+    }
     : {}),
   env: {
     NEXT_PUBLIC_BASE_PATH: basePath,

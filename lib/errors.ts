@@ -43,12 +43,12 @@ export class ChatbotError extends Error {
   constructor(errorCode: ErrorCode, cause?: string) {
     super();
 
-    const [type, surface] = errorCode.split(":");
+    const [type, surface] = (errorCode || "offline:api").split(":");
 
     this.type = type as ErrorType;
     this.cause = cause;
     this.surface = surface as Surface;
-    this.message = getMessageByErrorCode(errorCode);
+    this.message = getMessageByErrorCode(errorCode || "offline:api");
     this.statusCode = getStatusCodeByType(this.type);
   }
 

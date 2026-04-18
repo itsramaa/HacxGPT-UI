@@ -16,7 +16,7 @@
  */
 
 import { cookies } from "next/headers";
-import { isProductionEnvironment } from "./constants";
+import { isProductionEnvironment } from "../constants";
 
 export const TOKEN_COOKIE_NAME = "hacx_access_token";
 

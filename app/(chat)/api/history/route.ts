@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const backendSessions = await backendJSON<any[]>("/api/sessions?size=200");
+    const backendSessions = await backendJSON<any[]>("/api/sessions?limit=500");
 
     // Map backend SessionResponse → UI Chat format
     const mappedChats: Chat[] = backendSessions
@@ -30,18 +30,20 @@ export async function GET(request: NextRequest) {
         title: s.title || "New Chat",
         createdAt: s.created_at ? new Date(s.created_at) : new Date(),
         userId: s.user_id,
-        visibility: "private" as const,
+        visibility: s.visibility || "private",
       }))
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
-    // Manual cursor-based pagination
     let paginated = mappedChats;
     if (startingAfter) {
       const idx = paginated.findIndex((c) => c.id === startingAfter);
-      if (idx !== -1) { paginated = paginated.slice(idx + 1); }
-    } else if (endingBefore) {
-      const idx = paginated.findIndex((c) => c.id === endingBefore);
-      if (idx !== -1) { paginated = paginated.slice(0, idx); }
+      if (idx !== -1) {
+        paginated = paginated.slice(idx + 1);
+      } else {
+        // If not found in current 1000, we might need a better backend strategy
+        // but for now, we'll return empty to avoid stuck loading
+        paginated = [];
+      }
     }
 
     const sliced = paginated.slice(0, limit);

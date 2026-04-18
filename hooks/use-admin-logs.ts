@@ -28,9 +28,17 @@ export function useAdminLogs() {
   }, [logs]);
 
   const clearLogs = async () => {
-    // Note: In a real app, this would be an API call
-    toast({ type: "success", description: "Audit buffer cleared locally." });
-    mutateLogs({ items: [], total: 0, page: 1, size }, false);
+    try {
+      const res = await fetch("/api/admin/logs", { method: "DELETE" });
+      if (res.ok) {
+        toast({ type: "success", description: "Audit registry cleared successfully." });
+        mutateLogs({ items: [], total: 0, page: 1, size }, false);
+      } else {
+        toast({ type: "error", description: "Failed to clear audit registry." });
+      }
+    } catch (err) {
+      toast({ type: "error", description: "Network error while clearing logs." });
+    }
   };
 
   const filteredLogs =

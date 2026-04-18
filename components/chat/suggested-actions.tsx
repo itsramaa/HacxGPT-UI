@@ -13,11 +13,11 @@ import { useSuggestedActions } from "@/hooks/use-suggested-actions";
 
 type SuggestedActionsProps = {
   chatId: string;
-  sendMessage: UseChatHelpers<ChatMessage>["sendMessage"];
+  sendMessage: any;
   selectedVisibilityType: VisibilityType;
 };
 
-function PureSuggestedActions({ chatId }: SuggestedActionsProps) {
+function PureSuggestedActions({ chatId, sendMessage, selectedVisibilityType }: SuggestedActionsProps) {
   const router = useRouter();
   const { suggestedActions } = useSuggestedActions(4);
 
@@ -44,20 +44,19 @@ function PureSuggestedActions({ chatId }: SuggestedActionsProps) {
           }}
         >
           <Suggestion
-            className="h-auto w-full group relative rounded-[16px] border border-border/40 bg-card/40 px-4 py-3.5 text-left transition-all duration-300 sm:p-5 hover:bg-card/70 hover:border-primary/20 hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:hover:shadow-[0_8px_30px_rgb(0,0,0,0.2)] hover:-translate-y-1 active:scale-[0.98]"
+            className="h-auto w-full group relative rounded-[16px] border border-border/40 bg-card/40 px-4 py-3.5 text-left transition-all duration-300 sm:p-5 hover:bg-card/70 hover:border-primary/20 hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:hover:shadow-[0_8px_30px_rgb(0,0,0,0.2)] hover:-translate-y-1 active:scale-[0.98] whitespace-normal break-words flex-col items-start justify-start gap-2"
             onClick={(suggestion) => {
-              const url = `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/chat/${chatId}?query=${encodeURIComponent(suggestion)}`;
-              router.push(url);
+              sendMessage(suggestion);
             }}
             suggestion={suggestedAction}
           >
-            <div className="flex flex-col gap-1.5">
-              <span className="text-[13px] font-medium leading-normal text-foreground/90 group-hover:text-primary transition-colors duration-300">
+            <div className="flex flex-col gap-1.5 w-full">
+              <div className="text-[13px] font-medium leading-tight text-foreground/90 group-hover:text-primary transition-colors duration-300 block line-clamp-3">
                 {suggestedAction}
-              </span>
-              <span className="text-[11px] text-muted-foreground/50 group-hover:text-muted-foreground/70 transition-colors">
-                Quick prompt &rarr;
-              </span>
+              </div>
+              <div className="text-[10px] font-bold uppercase tracking-[0.1em] text-primary/40 group-hover:text-primary/60 transition-colors flex items-center gap-1">
+                EXECUTE PROMPT <span className="text-[14px] leading-none">&rarr;</span>
+              </div>
             </div>
 
             {/* Subtle Inner Glow on Hover */}

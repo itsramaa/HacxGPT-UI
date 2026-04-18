@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useRef, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useTheme } from "next-themes";
 import { useLocalStorage } from "usehooks-ts";
 import { toast } from "sonner";
@@ -32,6 +32,7 @@ export function useMultimodalHandlers({
   status: string;
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { setTheme, resolvedTheme } = useTheme();
   const { setPendingAttachmentIds, isModelAvailable } = useActiveChat();
   const [isUploading, setIsUploading] = useState(false);
@@ -41,6 +42,7 @@ export function useMultimodalHandlers({
   const [localStorageInput, setLocalStorageInput] = useLocalStorage("input", "");
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const hasSubmittedQuery = useRef<string | null>(null);
 
   // Sync with Local Storage
   useEffect(() => {
@@ -151,13 +153,15 @@ export function useMultimodalHandlers({
     return null;
   }, []);
 
-  const submitForm = useCallback(async () => {
+  const submitForm = useCallback(async (specificInput?: string) => {
     if (editingMessage) {
       (sendMessage as any)();
       return;
     }
 
-    if (!input.trim() && attachments.length === 0) return;
+    const val = specificInput ?? input;
+
+    if (!val.trim() && attachments.length === 0) return;
     if (status !== "ready" && status !== "error") {
       toast.error("Please wait for the model to finish its response!");
       return;
@@ -208,13 +212,13 @@ export function useMultimodalHandlers({
             name: attachment.name,
             mediaType: attachment.contentType,
           })),
-          { type: "text", text: input },
+          { type: "text", text: val },
         ],
       });
 
       setAttachments(() => []);
       setLocalStorageInput("");
-      setInput("");
+      if (!specificInput) setInput("");
       setTimeout(() => textareaRef.current?.focus(), 50);
     } catch (_error) {
       toast.error("Failed to process message attachments");
@@ -222,10 +226,18 @@ export function useMultimodalHandlers({
       setIsUploading(false);
     }
   }, [
-    input, setInput, attachments, setAttachments, sendMessage, chatId, 
-    uploadFile, editingMessage, setPendingAttachmentIds, status, isModelAvailable, 
+    input, setInput, attachments, setAttachments, sendMessage, chatId,
+    uploadFile, editingMessage, setPendingAttachmentIds, status, isModelAvailable,
     setLocalStorageInput
   ]);
+
+  useEffect(() => {
+    const query = searchParams.get("query");
+    if (query && status === "ready" && isModelAvailable && hasSubmittedQuery.current !== query) {
+      hasSubmittedQuery.current = query;
+      submitForm(query);
+    }
+  }, [searchParams, status, isModelAvailable, submitForm]);
 
   const handleFileChange = useCallback(async (files: File[]) => {
     const newAttachments: Attachment[] = files.map((file) => ({

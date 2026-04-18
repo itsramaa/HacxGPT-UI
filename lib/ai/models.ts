@@ -112,11 +112,11 @@ export async function getAllGatewayModels(): Promise<
 
     const json = await res.json();
     return (json.data ?? [])
-      .filter((m: GatewayModel) => m.type === "language")
+      .filter((m: GatewayModel) => m.id && m.type === "language")
       .map((m: GatewayModel) => ({
         id: m.id,
         name: m.name,
-        provider: m.id.split("/")[0],
+        provider: m.id.split("/")[0] || "unknown",
         description: "",
         capabilities: {
           tools: m.tags?.includes("tool-use") ?? false,

@@ -513,24 +513,6 @@ export function ActiveChatProvider({
     }
   }, [chatData, isNewChat, chatId]);
 
-  const hasAppendedQueryRef = useRef(false);
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const query = params.get("query");
-    if (query && !hasAppendedQueryRef.current) {
-      hasAppendedQueryRef.current = true;
-      window.history.replaceState(
-        {},
-        "",
-        `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/chat/${chatId}`
-      );
-      sendMessage({
-        role: "user" as const,
-        parts: [{ type: "text", text: query }],
-      });
-    }
-  }, [sendMessage, chatId]);
-
   useAutoResume({
     autoResume: !isNewChat && !!chatData,
     initialMessages,

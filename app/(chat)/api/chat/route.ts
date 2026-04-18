@@ -38,7 +38,7 @@ export async function POST(request: Request) {
 
   // 1. Resolve Auth & Guest Mode
   const sessionObj = await auth();
-  const isGuest = !sessionObj?.user;
+  const isGuest = !sessionObj?.user || id === "demo";
 
   // 1b. Guest Mode Logic: Call public demo endpoint
   if (isGuest) {
@@ -104,7 +104,7 @@ export async function POST(request: Request) {
                   } else if (errorStr.includes("503") || errorStr.includes("502")) {
                     description = " (Provider Overhead — Demo engine is currently overloaded.)";
                   }
-                  
+
                   writer.write({
                     type: "text-delta",
                     id: textPartId,
@@ -122,7 +122,7 @@ export async function POST(request: Request) {
                     delta: parsed.text,
                   });
                 }
-              } catch (_) {}
+              } catch (_) { }
             }
           }
         },
@@ -171,30 +171,36 @@ export async function POST(request: Request) {
 
     let wasNewChat = false;
 
-    if (!checkRes.ok && checkRes.status === 404) {
-      if (!providerId) {
-        return new ChatbotError(
-          "offline:chat",
-          "No valid provider found"
-        ).toResponse();
-      }
+    if (!checkRes.ok) {
+      if (checkRes.status === 404) {
+        if (!providerId) {
+          return new ChatbotError(
+            "offline:chat",
+            "No valid provider found"
+          ).toResponse();
+        }
 
-      const createRes = await backendFetch("/api/sessions", {
-        method: "POST",
-        body: JSON.stringify({
-          id,
-          title: "New Chat",
-          provider_id: providerId,
-          model_name: modelName,
-          system_prompt: null,
-        }),
-      });
-      if (createRes.ok) {
-        const createData = await createRes.json();
-        actualSessionId = createData.id;
-        wasNewChat = true;
+        const createRes = await backendFetch("/api/sessions", {
+          method: "POST",
+          body: JSON.stringify({
+            id,
+            title: "New Chat",
+            provider_id: providerId,
+            model_name: modelName,
+            system_prompt: null,
+          }),
+        });
+        if (createRes.ok) {
+          const createData = await createRes.json();
+          actualSessionId = createData.id;
+          wasNewChat = true;
+        } else {
+          console.error("Failed to create session:", await createRes.text());
+          return new ChatbotError("offline:chat").toResponse();
+        }
       } else {
-        console.error("Failed to create session:", await createRes.text());
+        // Other backend error (e.g. 422, 500)
+        console.error(`Backend session check failed (${checkRes.status}):`, await checkRes.text());
         return new ChatbotError("offline:chat").toResponse();
       }
     }
@@ -229,7 +235,7 @@ export async function POST(request: Request) {
       if (wasNewChat) {
         backendFetch(`/api/sessions/${actualSessionId}`, {
           method: "DELETE",
-        }).catch(() => {});
+        }).catch(() => { });
       }
       return new ChatbotError("rate_limit:chat").toResponse();
     }
@@ -238,7 +244,7 @@ export async function POST(request: Request) {
       if (wasNewChat) {
         backendFetch(`/api/sessions/${actualSessionId}`, {
           method: "DELETE",
-        }).catch(() => {});
+        }).catch(() => { });
       }
       return new ChatbotError("offline:chat").toResponse();
     }
@@ -285,7 +291,7 @@ export async function POST(request: Request) {
                 // Enhance error message with description
                 const errorStr = String(parsed.error);
                 let description = "";
-                
+
                 if (errorStr.includes("429")) {
                   description = " (Too Many Requests — The provider is rate-limiting your key. Please wait a few seconds.)";
                 } else if (errorStr.includes("401")) {
@@ -321,14 +327,6 @@ export async function POST(request: Request) {
           }
         }
 
-        // Proactively trigger title generation for new chats
-        if (wasNewChat) {
-          backendFetch(`/api/chat/${actualSessionId}/generate-title`, {
-            method: "POST",
-          }).catch((err) => {
-            console.error("Failed to trigger title generation:", err);
-          });
-        }
       },
       generateId: generateUUID,
     });
