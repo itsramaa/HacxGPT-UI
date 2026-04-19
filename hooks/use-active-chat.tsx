@@ -98,7 +98,10 @@ export function ActiveChatProvider({
     prevPathnameRef.current = pathname;
   }, [pathname, isNewChat]);
 
-  const { data: allModels } = useSWR<any>("/api/models", fetcher);
+  const { data: allModels } = useSWR<any>("/api/models", fetcher, {
+    revalidateOnFocus: false,
+    dedupingInterval: 300000, // 5 minutes
+  });
   const [currentModelId, setCurrentModelState] = useState(DEFAULT_CHAT_MODEL);
 
   const setCurrentModelId = async (id: string) => {
