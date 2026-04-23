@@ -19,7 +19,7 @@ export function ConnectivityHandler({
 
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/models`,
+        `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/health`,
         {
           method: "GET",
           cache: "no-store",
@@ -38,11 +38,8 @@ export function ConnectivityHandler({
           setIsVerifying(false);
         }
       } else {
-        const data = await response.json().catch(() => ({}));
-        if (data.error === "offline" || response.status >= 500) {
-          setIsOffline(true);
-          consecutiveSuccesses.current = 0;
-        }
+        setIsOffline(true);
+        consecutiveSuccesses.current = 0;
       }
     } catch (_err) {
       // Network error (backend process completely down)
@@ -60,8 +57,10 @@ export function ConnectivityHandler({
 
     // Global listener for instant offline trigger from other parts of the app
     const handleInstantOffline = () => {
-      setIsOffline(true);
-      consecutiveSuccesses.current = 0;
+      // Instead of forcing offline immediately, we trigger a health check
+      // This ensures that transient errors in other APIs don't show maintenance
+      // if the backend is actually still healthy (/health responds).
+      checkConnection();
     };
 
     // Listen for custom events or failed fetch notifications
@@ -72,13 +71,13 @@ export function ConnectivityHandler({
     window.fetch = async (...args) => {
       try {
         const response = await originalFetch(...args);
-        // Intercept 503 Service Unavailable or our proxy offline status
+        // Intercept 503 Service Unavailable
         if (response.status === 503) {
           handleInstantOffline();
         }
         return response;
       } catch (err) {
-        // If it's a network error (failed to fetch), trigger offline
+        // If it's a network error (failed to fetch), trigger health check
         if (err instanceof TypeError && err.message === "Failed to fetch") {
           handleInstantOffline();
         }
